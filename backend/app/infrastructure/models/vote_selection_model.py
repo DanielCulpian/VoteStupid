@@ -1,13 +1,10 @@
 import uuid
-
-from sqlalchemy import ForeignKey, Integer, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column
-
 from typing import TYPE_CHECKING
 
-from app.infrastructure.models.base import Base
-
+from sqlalchemy import ForeignKey, Integer, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.infrastructure.models.base import Base
 
 if TYPE_CHECKING:
     from app.infrastructure.models.vote_model import VoteModel
