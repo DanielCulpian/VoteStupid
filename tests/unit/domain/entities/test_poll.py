@@ -1,9 +1,9 @@
 import pytest
 
-from app.domain.entities.poll import Poll
+from datetime import datetime
 from app.domain.entities.option import Option
+from app.domain.entities.poll import Poll
 from app.domain.entities.poll_type import PollType
-
 
 def test_create_valid_poll():
     options = [
@@ -94,4 +94,21 @@ def test_single_choice_rejects_max_selections():
             poll_type=PollType.SINGLE_CHOICE,
             options=options,
             max_selections=2
+        )
+
+def test_poll_rejects_closes_at_without_timezone():
+    options = [
+        Option(text="Ir al cine"),
+        Option(text="Ir a cenar")
+    ]
+
+    with pytest.raises(
+        ValueError,
+        match="La fecha de cierre debe incluir una zona horaria."
+    ):
+        Poll(
+            title="¿Qué hacemos el sábado?",
+            poll_type=PollType.SINGLE_CHOICE,
+            options=options,
+            closes_at=datetime(2026, 12, 31, 23, 59)
         )

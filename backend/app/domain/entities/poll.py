@@ -41,3 +41,9 @@ class Poll:
                     "El máximo de selecciones debe estar entre 1 "
                     "y el número total de opciones."
                 )
+
+        if self.closes_at is not None:
+            if self.closes_at.tzinfo is None:
+                raise ValueError(
+                    "La fecha de cierre debe incluir una zona horaria."
+                )
