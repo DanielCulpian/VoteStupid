@@ -1,5 +1,5 @@
 from uuid import uuid4
-
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -471,5 +471,186 @@ def test_update_vote_returns_422_when_selection_is_invalid(db_session):
         assert first_response.status_code == 201
         assert response.status_code == 422
         assert "exactamente una opción" in response.json()["detail"]
+    finally:
+        app.dependency_overrides.clear()
+
+def test_get_poll_results_returns_200_when_poll_has_votes(db_session):
+    poll = Poll(
+        title="Mejor opción",
+        poll_type=PollType.SINGLE_CHOICE,
+        options=[
+            Option(text="Opción A"),
+            Option(text="Opción B"),
+            Option(text="Opción C"),
+        ],
+    )
+
+    repository = SqlAlchemyPollRepository(db_session)
+    repository.save_poll(poll)
+    app.dependency_overrides[get_poll_repository] = lambda: repository
+
+    try:
+        with TestClient(app) as client:
+            votes = [
+                (poll.options[0], "i" * 40),
+                (poll.options[0], "j" * 40),
+                (poll.options[1], "k" * 40),
+            ]
+
+            for option, token in votes:
+                response = client.post(
+                    f"/api/polls/{poll.id}/votes",
+                    json={"selected_option_ids": [str(option.id)]},
+                    headers={"X-Voter-Token": token},
+                )
+                assert response.status_code == 201
+
+            response = client.get(
+                f"/api/polls/{poll.id}/results"
+            )
+
+        assert response.status_code == 200
+
+        data = response.json()
+
+        assert data["poll_id"] == str(poll.id)
+        assert data["poll_title"] == poll.title
+        assert data["total_votes"] == 3
+
+        results = data["results"]
+
+        assert results[0]["option_text"] == "Opción A"
+        assert results[0]["votes"] == 2
+        assert results[0]["points"] == 2
+        assert results[0]["percentage"] == pytest.approx(66.67, abs=0.01)
+
+        assert results[1]["option_text"] == "Opción B"
+        assert results[1]["votes"] == 1
+        assert results[1]["percentage"] == pytest.approx(33.33, abs=0.01)
+
+        assert results[2]["option_text"] == "Opción C"
+        assert results[2]["votes"] == 0
+
+        assert "voter_token_hash" not in data
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_get_poll_results_returns_zero_when_poll_has_no_votes(db_session):
+    poll = Poll(
+        title="Votación sin participantes",
+        poll_type=PollType.SINGLE_CHOICE,
+        options=[
+            Option(text="Opción A"),
+            Option(text="Opción B"),
+        ],
+    )
+
+    repository = SqlAlchemyPollRepository(db_session)
+    repository.save_poll(poll)
+    app.dependency_overrides[get_poll_repository] = lambda: repository
+
+    try:
+        with TestClient(app) as client:
+            response = client.get(
+                f"/api/polls/{poll.id}/results"
+            )
+
+        assert response.status_code == 200
+
+        data = response.json()
+
+        assert data["total_votes"] == 0
+
+        for result in data["results"]:
+            assert result["votes"] == 0
+            assert result["points"] == 0
+            assert result["percentage"] == 0
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_get_poll_results_returns_404_when_poll_does_not_exist(db_session):
+    repository = SqlAlchemyPollRepository(db_session)
+    app.dependency_overrides[get_poll_repository] = lambda: repository
+
+    try:
+        with TestClient(app) as client:
+            response = client.get(
+                f"/api/polls/{uuid4()}/results"
+            )
+
+        assert response.status_code == 404
+        assert response.json()["detail"] == "La votación no existe."
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_get_poll_results_calculates_ranking_points(db_session):
+    poll = Poll(
+        title="Ranking de opciones",
+        poll_type=PollType.RANKING,
+        options=[
+            Option(text="Opción A"),
+            Option(text="Opción B"),
+            Option(text="Opción C"),
+        ],
+    )
+
+    repository = SqlAlchemyPollRepository(db_session)
+    repository.save_poll(poll)
+    app.dependency_overrides[get_poll_repository] = lambda: repository
+
+    first_voter = "l" * 40
+    second_voter = "m" * 40
+
+    try:
+        with TestClient(app) as client:
+            first_response = client.post(
+                f"/api/polls/{poll.id}/votes",
+                json={
+                    "selected_option_ids": [
+                        str(poll.options[0].id),
+                        str(poll.options[1].id),
+                        str(poll.options[2].id),
+                    ]
+                },
+                headers={"X-Voter-Token": first_voter},
+            )
+
+            second_response = client.post(
+                f"/api/polls/{poll.id}/votes",
+                json={
+                    "selected_option_ids": [
+                        str(poll.options[1].id),
+                        str(poll.options[2].id),
+                        str(poll.options[0].id),
+                    ]
+                },
+                headers={"X-Voter-Token": second_voter},
+            )
+
+            response = client.get(
+                f"/api/polls/{poll.id}/results"
+            )
+
+        assert first_response.status_code == 201
+        assert second_response.status_code == 201
+        assert response.status_code == 200
+
+        data = response.json()
+
+        assert data["total_votes"] == 2
+
+        results = data["results"]
+
+        assert results[0]["points"] == 2
+        assert results[0]["percentage"] == pytest.approx(33.33, abs=0.01)
+
+        assert results[1]["points"] == 3
+        assert results[1]["percentage"] == 50
+
+        assert results[2]["points"] == 1
+        assert results[2]["percentage"] == pytest.approx(16.67, abs=0.01)
     finally:
         app.dependency_overrides.clear()

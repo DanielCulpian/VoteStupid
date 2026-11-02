@@ -1,7 +1,8 @@
 
 from datetime import datetime, timedelta, timezone
-from uuid import uuid4
+from uuid import uuid4, UUID
 
+from app.domain.entities.vote import Vote
 import pytest
 
 from app.application.use_cases.update_vote import UpdateVote
@@ -28,6 +29,13 @@ class FakePollRepository(PollRepository):
     def get_vote_by_voter(self, poll_id, voter_token_hash):
         return self.votes.get((poll_id, voter_token_hash))
 
+    def get_votes_by_poll(self, poll_id):
+        return [
+            vote
+            for (stored_poll_id, _), vote in self.votes.items()
+            if stored_poll_id == poll_id
+        ]
+
     def save_vote(self, vote):
         self.votes[(vote.poll_id, vote.voter_token_hash)] = vote
 
@@ -47,6 +55,9 @@ class FakePollRepository(PollRepository):
 
     def save_poll(self, poll):
         self.polls[poll.id] = poll
+
+    def get_votes_by_poll(self, poll_id: UUID) -> list[Vote]:
+        return []
 
 def create_poll(
     poll_type=PollType.SINGLE_CHOICE,

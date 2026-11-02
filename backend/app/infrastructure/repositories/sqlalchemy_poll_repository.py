@@ -188,3 +188,17 @@ class SqlAlchemyPollRepository(PollRepository):
         poll_model = poll_to_model(poll)
         self.session.add(poll_model)
         self._commit()
+
+    def get_votes_by_poll(self, poll_id: UUID) -> list[Vote]:
+        statement = (
+            select(VoteModel)
+            .options(selectinload(VoteModel.selections))
+            .where(VoteModel.poll_id == poll_id)
+        )
+
+        vote_models = self.session.execute(statement).scalars().all()
+
+        return [
+            vote_to_entity(vote_model)
+            for vote_model in vote_models
+        ]

@@ -59,6 +59,9 @@ class FakePollRepository:
     def save_poll(self, poll):
         self.polls[poll.id] = poll
 
+    def get_votes_by_poll(self, poll_id: UUID) -> list[Vote]:
+        return []
+
 
 def create_poll(poll_type, max_selections=None):
     options = [

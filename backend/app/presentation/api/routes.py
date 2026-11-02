@@ -3,12 +3,13 @@ from fastapi import APIRouter, Depends, status, HTTPException, Header
 from app.application.use_cases.create_poll import CreatePoll
 from app.domain.entities.poll import Poll
 from app.domain.repositories.poll_repository import PollRepository
-from app.presentation.api.dependencies import get_poll_repository, get_cast_vote_use_case, get_update_vote_use_case
+from app.presentation.api.dependencies import get_poll_repository, get_cast_vote_use_case, get_update_vote_use_case, get_poll_results_use_case
 from app.presentation.api.schemas import CreatePollRequest, PollResponse, CastVoteRequest, VoteResponse, UpdateVoteRequest
 from app.application.use_cases.cast_vote import CastVote
 from app.infrastructure.security.voter_token import hash_voter_token
 from app.application.use_cases.update_vote import UpdateVote
-
+from app.application.use_cases.get_poll_results import GetPollResults
+from app.presentation.api.schemas import PollResultsResponse
 from uuid import UUID
 
 from app.application.use_cases.get_poll import GetPoll
@@ -181,4 +182,36 @@ def update_vote(
         selected_option_ids=vote.selected_option_ids,
         created_at=vote.created_at,
         updated_at=vote.updated_at,
+    )
+
+@router.get(
+    "/api/polls/{poll_id}/results",
+    response_model=PollResultsResponse,
+)
+def get_poll_results(
+    poll_id: UUID,
+    use_case: GetPollResults = Depends(get_poll_results_use_case),
+) -> PollResultsResponse:
+    results = use_case.execute(poll_id)
+
+    if results is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="La votación no existe.",
+        )
+
+    return PollResultsResponse(
+        poll_id=results.poll_id,
+        poll_title=results.poll_title,
+        total_votes=results.total_votes,
+        results=[
+            {
+                "option_id": result.option_id,
+                "option_text": result.option_text,
+                "votes": result.votes,
+                "points": result.points,
+                "percentage": result.percentage,
+            }
+            for result in results.results
+        ],
     )

@@ -4,7 +4,7 @@ from app.application.use_cases.validate_vote_selection import ValidateVoteSelect
 from fastapi import Depends
 from sqlalchemy.orm import Session
 from app.application.use_cases.update_vote import UpdateVote
-
+from app.application.use_cases.get_poll_results import GetPollResults
 from app.infrastructure.database.session import SessionLocal
 from app.infrastructure.repositories.sqlalchemy_poll_repository import (
     SqlAlchemyPollRepository,
@@ -44,3 +44,8 @@ def get_update_vote_use_case(
         poll_repository=poll_repository,
         validate_vote_selection=validate_vote_selection,
     )
+
+def get_poll_results_use_case(
+    poll_repository: SqlAlchemyPollRepository = Depends(get_poll_repository),
+) -> GetPollResults:
+    return GetPollResults(poll_repository)

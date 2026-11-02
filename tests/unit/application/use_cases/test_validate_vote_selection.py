@@ -1,6 +1,7 @@
 
 import pytest
-
+from uuid import UUID
+from app.domain.entities.vote import Vote
 from app.application.use_cases.validate_vote_selection import (
     ValidateVoteSelection
 )
@@ -16,6 +17,9 @@ class FakePollRepository:
 
     def save_poll(self, poll):
         self.polls[poll.id] = poll
+
+    def get_votes_by_poll(self, poll_id: UUID) -> list[Vote]:
+        return []
 
 
 def create_poll(poll_type, max_selections=None):

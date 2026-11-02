@@ -43,3 +43,7 @@ class PollRepository(ABC):
     @abstractmethod
     def save_poll(self, poll: Poll) -> None:
         pass
+
+    @abstractmethod
+    def get_votes_by_poll(self, poll_id: UUID) -> list[Vote]:
+        pass

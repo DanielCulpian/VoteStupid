@@ -1,9 +1,10 @@
 import pytest
-
+from uuid import UUID
 from app.domain.entities.poll import Poll
 from app.domain.entities.poll_type import PollType
 from app.domain.repositories.poll_repository import PollRepository
 from app.application.use_cases.create_poll import CreatePoll
+from app.domain.entities.vote import Vote
 
 
 class FakePollRepository(PollRepository):
@@ -31,6 +32,9 @@ class FakePollRepository(PollRepository):
 
     def get_options_by_ids(self, poll_id, option_ids):
         raise NotImplementedError
+
+    def get_votes_by_poll(self, poll_id: UUID) -> list[Vote]:
+        return []
 
 
 def test_create_poll_successfully():

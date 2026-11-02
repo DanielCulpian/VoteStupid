@@ -227,3 +227,101 @@ def test_update_poll_rejects_removing_option_with_votes(db_session):
 
     assert result is not None
     assert result.selected_option_ids == [poll.options[0].id]
+
+def test_get_votes_by_poll_returns_empty_list_when_no_votes(db_session):
+    poll = Poll(
+        title="Votación sin participantes",
+        poll_type=PollType.SINGLE_CHOICE,
+        options=[
+            Option(text="Opción A"),
+            Option(text="Opción B")
+        ]
+    )
+
+    repository = SqlAlchemyPollRepository(db_session)
+    repository.save_poll(poll)
+
+    result = repository.get_votes_by_poll(poll.id)
+
+    assert result == []
+
+
+def test_get_votes_by_poll_returns_all_votes(db_session):
+    poll = Poll(
+        title="¿Qué película vemos?",
+        poll_type=PollType.SINGLE_CHOICE,
+        options=[
+            Option(text="Matrix"),
+            Option(text="Interestelar"),
+            Option(text="Origen")
+        ]
+    )
+
+    repository = SqlAlchemyPollRepository(db_session)
+    repository.save_poll(poll)
+
+    vote_1 = Vote(
+        poll_id=poll.id,
+        voter_token_hash="hash_participante_001",
+        selected_option_ids=[poll.options[0].id]
+    )
+
+    vote_2 = Vote(
+        poll_id=poll.id,
+        voter_token_hash="hash_participante_002",
+        selected_option_ids=[poll.options[1].id]
+    )
+
+    repository.save_vote(vote_1)
+    repository.save_vote(vote_2)
+
+    result = repository.get_votes_by_poll(poll.id)
+
+    assert len(result) == 2
+
+    result_by_hash = {
+        vote.voter_token_hash: vote
+        for vote in result
+    }
+
+    assert result_by_hash["hash_participante_001"].selected_option_ids == [
+        poll.options[0].id
+    ]
+
+    assert result_by_hash["hash_participante_002"].selected_option_ids == [
+        poll.options[1].id
+    ]
+
+
+def test_get_votes_by_poll_preserves_ranking_order(db_session):
+    poll = Poll(
+        title="Ordena tus películas favoritas",
+        poll_type=PollType.RANKING,
+        options=[
+            Option(text="Matrix"),
+            Option(text="Interestelar"),
+            Option(text="Origen")
+        ]
+    )
+
+    repository = SqlAlchemyPollRepository(db_session)
+    repository.save_poll(poll)
+
+    ranking = [
+        poll.options[2].id,
+        poll.options[0].id,
+        poll.options[1].id
+    ]
+
+    vote = Vote(
+        poll_id=poll.id,
+        voter_token_hash="hash_ranking_001",
+        selected_option_ids=ranking
+    )
+
+    repository.save_vote(vote)
+
+    result = repository.get_votes_by_poll(poll.id)
+
+    assert len(result) == 1
+    assert result[0].selected_option_ids == ranking
