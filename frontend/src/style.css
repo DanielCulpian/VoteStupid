@@ -1,0 +1,337 @@
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+:root {
+  font-family: 'DM Sans', sans-serif;
+  color: #202020;
+  background: #faf8f3;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button {
+  font: inherit;
+}
+
+.home {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 32px 7%;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo {
+  color: #202020;
+  text-decoration: none;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 27px;
+  font-weight: 700;
+}
+
+.logo span {
+  color: #f15b42;
+}
+
+.tagline {
+  color: #777;
+  font-size: 13px;
+}
+
+.hero {
+  width: 100%;
+  max-width: 760px;
+  margin: auto;
+  padding: 100px 0;
+}
+
+.eyebrow {
+  color: #f15b42;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+h1 {
+  margin: 25px 0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(48px, 8vw, 88px);
+  line-height: 1.02;
+  letter-spacing: -5px;
+}
+
+h1 span {
+  color: #f15b42;
+}
+
+.description {
+  max-width: 490px;
+  color: #666;
+  font-size: 17px;
+  line-height: 1.8;
+}
+
+.create-button {
+  display: flex;
+  align-items: center;
+  gap: 35px;
+  margin-top: 35px;
+  padding: 18px 25px;
+  border: none;
+  border-radius: 9px;
+  background: #f15b42;
+  color: white;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.create-button:hover {
+  background: #d94832;
+  transform: translateY(-2px);
+}
+
+.create-button span {
+  font-size: 20px;
+}
+
+.note {
+  margin-top: 20px;
+  color: #888;
+  font-size: 12px;
+}
+
+.footer {
+  padding-top: 25px;
+  border-top: 1px solid #e8e5de;
+  color: #999;
+  font-size: 12px;
+}
+
+@media (max-width: 600px) {
+  .home {
+    padding: 24px 6%;
+  }
+
+  .tagline {
+    display: none;
+  }
+
+  .hero {
+    padding: 70px 0;
+  }
+
+  h1 {
+    letter-spacing: -3px;
+  }
+}
+
+
+.form-container {
+  width: 100%;
+  max-width: 680px;
+  margin: 60px auto;
+}
+
+.form-container h1 {
+  font-size: clamp(42px, 7vw, 68px);
+}
+
+.poll-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 40px;
+}
+
+.poll-form label {
+  margin-top: 16px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.poll-form input,
+.poll-form textarea,
+.poll-form select {
+  width: 100%;
+  padding: 15px;
+  border: 1px solid #e3dfd7;
+  border-radius: 8px;
+  background: white;
+  color: #202020;
+  font: inherit;
+  outline: none;
+}
+
+.poll-form input:focus,
+.poll-form textarea:focus,
+.poll-form select:focus {
+  border-color: #f15b42;
+}
+
+.options-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.options-header span {
+  color: #888;
+  font-size: 12px;
+}
+
+.option-row {
+  display: flex;
+  gap: 10px;
+}
+
+.remove-button {
+  width: 48px;
+  border: 1px solid #e3dfd7;
+  border-radius: 8px;
+  background: white;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.remove-button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.add-button {
+  align-self: flex-start;
+  padding: 10px 0;
+  border: none;
+  background: transparent;
+  color: #f15b42;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.poll-form .create-button {
+  align-self: flex-start;
+  margin-top: 25px;
+}
+
+.poll-form textarea {
+  resize: vertical;
+  max-width: 100%;
+}
+
+.error-message {
+  padding: 14px;
+  border: 1px solid #f1b5aa;
+  border-radius: 8px;
+  background: #fff0ed;
+  color: #b73524;
+  font-size: 14px;
+}
+
+.success-message {
+  margin-top: 35px;
+  padding: 25px;
+  border: 1px solid #b9ddbd;
+  border-radius: 10px;
+  background: #f0f8f0;
+}
+
+.success-message h2 {
+  margin-top: 0;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.poll-id {
+  overflow-wrap: anywhere;
+  color: #666;
+  font-size: 12px;
+}
+
+.field-hint {
+  margin: 0;
+  color: #888;
+  font-size: 12px;
+}
+
+.create-button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+  transform: none;
+}
+.poll-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 25px;
+}
+
+.poll-option {
+  padding: 18px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  background: white;
+  font-weight: 600;
+}
+
+.poll-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.poll-option.selected {
+  border: 2px solid #222;
+  background: #f1f1f1;
+}
+
+.ranking-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  background: white;
+}
+
+.ranking-text {
+  flex: 1;
+}
+
+.ranking-option button {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #ddd;
+  border-radius: 7px;
+  background: white;
+  cursor: pointer;
+}
+
+.ranking-option button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}

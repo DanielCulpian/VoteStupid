@@ -1,5 +1,13 @@
-from fastapi import APIRouter, Depends, status, HTTPException, Header
-
+﻿from fastapi import (
+    APIRouter,
+    Depends,
+    status,
+    HTTPException,
+    Header,
+    WebSocket,
+    WebSocketDisconnect,
+)
+from app.infrastructure.realtime.connection_manager import connection_manager
 from app.application.use_cases.create_poll import CreatePoll
 from app.domain.entities.poll import Poll
 from app.domain.repositories.poll_repository import PollRepository
@@ -16,11 +24,16 @@ from app.application.use_cases.get_poll import GetPoll
 
 router = APIRouter()
 
+def build_results_message(results: PollResultsResponse) -> dict:
+    return {
+        "type": "results_updated",
+        "results": results.model_dump(mode="json"),
+    }
 
 @router.get("/")
 def home():
     return {
-        "message": "¡Bienvenido a VoteStupid!"
+        "message": "Â¡Bienvenido a VoteStupid!"
     }
 
 
@@ -30,7 +43,7 @@ def get_info():
         "app": "VoteStupid",
         "version": "0.1.0",
         "status": "En desarrollo",
-        "description": "Aplicación de votaciones para amigos"
+        "description": "AplicaciÃ³n de votaciones para amigos"
     }
 
 
@@ -38,7 +51,7 @@ def get_info():
 def get_status():
     return {
         "online": True,
-        "message": "VoteStupid está funcionando"
+        "message": "VoteStupid estÃ¡ funcionando"
     }
 
 @router.post(
@@ -78,7 +91,7 @@ def get_poll(
     if poll is None:
         raise HTTPException(
             status_code=404,
-            detail="La votación no existe."
+            detail="La votaciÃ³n no existe."
         )
 
     return poll
@@ -88,7 +101,7 @@ def get_poll(
     response_model=VoteResponse,
     status_code=status.HTTP_201_CREATED,
 )
-def cast_vote(
+async def cast_vote(
     poll_id: UUID,
     request: CastVoteRequest,
     x_voter_token: str = Header(
@@ -98,6 +111,7 @@ def cast_vote(
         max_length=256,
     ),
     use_case: CastVote = Depends(get_cast_vote_use_case),
+    results_use_case: GetPollResults = Depends(get_poll_results_use_case),
 ):
     voter_token_hash = hash_voter_token(x_voter_token)
 
@@ -126,6 +140,30 @@ def cast_vote(
             detail=message,
         ) from error
 
+    results = results_use_case.execute(poll_id)
+
+    if results is not None:
+        results_response = PollResultsResponse(
+            poll_id=results.poll_id,
+            poll_title=results.poll_title,
+            total_votes=results.total_votes,
+            results=[
+                {
+                    "option_id": result.option_id,
+                    "option_text": result.option_text,
+                    "votes": result.votes,
+                    "points": result.points,
+                    "percentage": result.percentage,
+                }
+                for result in results.results
+            ],
+        )
+
+        await connection_manager.broadcast(
+            poll_id,
+            build_results_message(results_response),
+        )
+
     return VoteResponse(
         id=vote.id,
         poll_id=vote.poll_id,
@@ -139,7 +177,7 @@ def cast_vote(
     response_model=VoteResponse,
     status_code=status.HTTP_200_OK,
 )
-def update_vote(
+async def update_vote(
     poll_id: UUID,
     request: UpdateVoteRequest,
     x_voter_token: str = Header(
@@ -149,6 +187,7 @@ def update_vote(
         max_length=256,
     ),
     use_case: UpdateVote = Depends(get_update_vote_use_case),
+    results_use_case: GetPollResults = Depends(get_poll_results_use_case),
 ):
     voter_token_hash = hash_voter_token(x_voter_token)
 
@@ -161,7 +200,7 @@ def update_vote(
     except ValueError as error:
         message = str(error)
 
-        if "no existe" in message or "todavía no ha votado" in message:
+        if "no existe" in message or "todavÃ­a no ha votado" in message:
             status_code = status.HTTP_404_NOT_FOUND
         elif (
             "cerrada" in message
@@ -175,6 +214,30 @@ def update_vote(
             status_code=status_code,
             detail=message,
         ) from error
+
+    results = results_use_case.execute(poll_id)
+
+    if results is not None:
+        results_response = PollResultsResponse(
+            poll_id=results.poll_id,
+            poll_title=results.poll_title,
+            total_votes=results.total_votes,
+            results=[
+                {
+                    "option_id": result.option_id,
+                    "option_text": result.option_text,
+                    "votes": result.votes,
+                    "points": result.points,
+                    "percentage": result.percentage,
+                }
+                for result in results.results
+            ],
+        )
+
+        await connection_manager.broadcast(
+            poll_id,
+            build_results_message(results_response),
+        )
 
     return VoteResponse(
         id=vote.id,
@@ -197,7 +260,7 @@ def get_poll_results(
     if results is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="La votación no existe.",
+            detail="La votaciÃ³n no existe.",
         )
 
     return PollResultsResponse(
@@ -215,3 +278,17 @@ def get_poll_results(
             for result in results.results
         ],
     )
+
+@router.websocket("/api/polls/{poll_id}/ws")
+async def poll_updates(
+    websocket: WebSocket,
+    poll_id: UUID,
+):
+    await connection_manager.connect(poll_id, websocket)
+
+    try:
+        while True:
+            await websocket.receive_text()
+
+    except WebSocketDisconnect:
+        connection_manager.disconnect(poll_id, websocket)
