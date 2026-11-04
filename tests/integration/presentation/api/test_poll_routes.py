@@ -159,6 +159,40 @@ def test_get_admin_poll_returns_403_when_admin_token_is_invalid(db_session):
         app.dependency_overrides.clear()
 
 
+def test_get_admin_poll_returns_422_when_admin_token_is_missing(db_session):
+    """Comprueba que la administración exige la cabecera del token privado."""
+    repository = SqlAlchemyPollRepository(db_session)
+    app.dependency_overrides[get_poll_repository] = lambda: repository
+
+    payload = {
+        "title": "Votación con acceso privado",
+        "option_texts": ["Opción A", "Opción B"],
+        "poll_type": "single_choice",
+    }
+
+    try:
+        with TestClient(app) as client:
+            # Arrange: creamos una votación existente con administración privada.
+            creation_response = client.post("/api/polls", json=payload)
+            assert creation_response.status_code == 201
+            created_poll = creation_response.json()
+
+            # Act: consultamos la administración sin enviar X-Admin-Token.
+            response = client.get(f"/api/admin/polls/{created_poll['id']}")
+
+        # Assert: FastAPI identifica la cabecera ausente sin devolver la votación.
+        assert response.status_code == 422
+        data = response.json()
+        assert set(data) == {"detail"}
+        assert any(
+            error["loc"] == ["header", "X-Admin-Token"]
+            and error["type"] == "missing"
+            for error in data["detail"]
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+
 def test_create_poll_returns_422_when_title_is_empty(db_session):
     """Comprueba que la creación de votaciones responde con HTTP 422 cuando el título está vacío."""
     repository = SqlAlchemyPollRepository(db_session)
