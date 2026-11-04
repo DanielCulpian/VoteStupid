@@ -1,16 +1,11 @@
 import uuid
 from datetime import datetime, timezone
-
-from sqlalchemy import String, Text, Integer, Boolean, DateTime
-from sqlalchemy.orm import Mapped, mapped_column
-
-from app.infrastructure.models.base import Base
-
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-
 from typing import TYPE_CHECKING
 
+from sqlalchemy import String, Text, Integer, Boolean, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.infrastructure.models.base import Base
 
 if TYPE_CHECKING:
     from app.infrastructure.models.option_model import OptionModel
@@ -53,6 +48,11 @@ class PollModel(Base):
         Boolean,
         nullable=False,
         default=True
+    )
+
+    admin_token_hash: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True
     )
 
     created_at: Mapped[datetime] = mapped_column(

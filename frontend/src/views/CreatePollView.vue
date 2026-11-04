@@ -1,8 +1,10 @@
-
 <script setup lang="ts">
 import { ref } from 'vue'
 import { createPoll } from '../services/pollService'
-import type { PollType, PollResponse } from '../types/poll'
+import type {
+  PollType,
+  PollCreatedResponse,
+} from '../types/poll'
 
 const title = ref('')
 const description = ref('')
@@ -10,10 +12,11 @@ const pollType = ref<PollType>('single_choice')
 const options = ref(['', ''])
 const maxSelections = ref<number | null>(null)
 const closesAt = ref('')
-
+const publicUrl = ref('')
+const adminUrl = ref('')
 const isSubmitting = ref(false)
 const errorMessage = ref('')
-const createdPoll = ref<PollResponse | null>(null)
+const createdPoll = ref<PollCreatedResponse | null>(null)
 
 function addOption() {
   options.value.push('')
@@ -72,6 +75,11 @@ async function submitPoll() {
     })
 
     createdPoll.value = poll
+    publicUrl.value =
+      `${window.location.origin}/votacion/${poll.id}`
+
+    adminUrl.value =
+      `${window.location.origin}/admin/${poll.id}#token=${encodeURIComponent(poll.admin_token)}`
   } catch (error) {
     errorMessage.value =
       error instanceof Error
@@ -96,18 +104,28 @@ async function submitPoll() {
       <h1>Vamos a <span>decidir.</span></h1>
 
       <div v-if="createdPoll" class="success-message">
-        <h2>¡Votación creada!</h2>
-        <p>Tu votación se ha guardado correctamente.</p>
-        <p class="poll-id">
-          Identificador: {{ createdPoll.id }}
-        </p>
-        <RouterLink
-            class="create-button"
-            :to="`/votacion/${createdPoll.id}`"
-            >
-                Ver mi votación
-            <span>→</span>
-        </RouterLink>
+        <div v-if="createdPoll" class="success-message">
+          <h2>¡Votación creada!</h2>
+          <p>Tu votación se ha guardado correctamente.</p>
+
+          <div class="created-link">
+            <h3>Enlace para los participantes</h3>
+            <a :href="publicUrl" target="_blank">
+              {{ publicUrl }}
+            </a>
+          </div>
+
+          <div class="created-link">
+            <h3>Enlace privado de administración</h3>
+            <a :href="adminUrl">
+              Abrir panel de administración →
+            </a>
+            <p>
+              Guarda este enlace. Cualquiera que lo tenga podrá administrar
+              tu votación.
+            </p>
+          </div>
+        </div>
       </div>
 
       <form

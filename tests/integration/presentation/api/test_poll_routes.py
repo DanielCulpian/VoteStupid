@@ -379,7 +379,7 @@ def test_update_vote_returns_404_when_voter_has_not_voted(db_session):
                 headers={"X-Voter-Token": "f" * 40},
             )
 
-        assert response.status_code == 404
+        assert response.status_code == 404, response.text
         assert response.json()["detail"] == (
             "Este participante todavía no ha votado."
         )

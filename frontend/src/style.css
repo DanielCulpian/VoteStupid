@@ -335,3 +335,37 @@ h1 span {
   opacity: 0.3;
   cursor: not-allowed;
 }
+
+.created-link {
+  margin-top: 1.5rem;
+}
+
+.created-link a {
+  overflow-wrap: anywhere;
+}
+
+
+.admin-page {
+  width: min(700px, 92%);
+  margin: 40px auto;
+}
+
+.admin-card {
+  margin: 24px 0;
+  padding: 24px;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  background: white;
+}
+
+.admin-card button {
+  margin: 8px 8px 8px 0;
+}
+
+.success-message {
+  color: #187a42;
+}
+
+.error-message {
+  color: #b42318;
+}

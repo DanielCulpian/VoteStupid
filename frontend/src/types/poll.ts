@@ -29,3 +29,7 @@ export interface PollResponse {
   is_active: boolean
   created_at: string
 }
+
+export interface PollCreatedResponse extends PollResponse {
+  admin_token: string
+}

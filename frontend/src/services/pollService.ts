@@ -1,10 +1,14 @@
 import { apiRequest } from './api'
-import type { CreatePollRequest, PollResponse } from '../types/poll'
+import type {
+  CreatePollRequest,
+  PollCreatedResponse,
+  PollResponse,
+} from '../types/poll'
 
 export function createPoll(
   poll: CreatePollRequest,
-): Promise<PollResponse> {
-  return apiRequest<PollResponse>('/api/polls', {
+): Promise<PollCreatedResponse> {
+  return apiRequest<PollCreatedResponse>('/api/polls', {
     method: 'POST',
     body: JSON.stringify(poll),
   })

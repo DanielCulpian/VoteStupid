@@ -81,6 +81,9 @@ class PollResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+class PollCreatedResponse(PollResponse):
+    admin_token: str
+
 class CastVoteRequest(BaseModel):
     selected_option_ids: list[UUID] = Field(min_length=1)
 

@@ -1,4 +1,3 @@
-
 from uuid import UUID
 
 from app.domain.entities.poll import Poll

@@ -24,6 +24,7 @@ def to_model(poll: Poll) -> PollModel:
         closes_at=poll.closes_at,
         is_active=poll.is_active,
         created_at=poll.created_at,
+        admin_token_hash=poll.admin_token_hash,
         options=option_models
     )
 
@@ -46,5 +47,6 @@ def to_entity(poll_model: PollModel) -> Poll:
         max_selections=poll_model.max_selections,
         closes_at=poll_model.closes_at,
         is_active=poll_model.is_active,
+        admin_token_hash=poll_model.admin_token_hash,
         created_at=poll_model.created_at
     )

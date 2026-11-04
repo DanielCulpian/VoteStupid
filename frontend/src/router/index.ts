@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import PollView from '../views/PollView.vue'
 import HomeView from '../views/HomeView.vue'
 import CreatePollView from '../views/CreatePollView.vue'
+import AdminView from '../views/AdminView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -20,6 +21,11 @@ const router = createRouter({
         path: '/votacion/:id',
         name: 'poll',
         component: PollView,
+    },
+    {
+      path: '/admin/:id',
+      name: 'admin',
+      component: AdminView,
     },
   ],
 })

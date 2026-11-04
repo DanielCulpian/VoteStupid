@@ -5,6 +5,12 @@ from app.domain.entities.poll import Poll
 from app.domain.entities.poll_type import PollType
 from app.domain.repositories.poll_repository import PollRepository
 
+from app.application.results.created_poll import CreatedPoll
+from app.infrastructure.security.admin_token import (
+    generate_admin_token,
+    hash_admin_token,
+)
+
 
 class CreatePoll:
 
@@ -19,26 +25,33 @@ class CreatePoll:
         description: str | None = None,
         max_selections: int | None = None,
         closes_at: datetime | None = None
-    ) -> Poll:
+    ) -> CreatedPoll:
 
-        # 1. Crear las opciones
+        # 1. Generar el secreto de administración.
+        admin_token = generate_admin_token()
+
+        # 2. Crear las opciones.
         options = [
             Option(text=option_text)
             for option_text in option_texts
         ]
 
-        # 2. Crear la votación
+        # 3. Crear la votación con el hash del secreto.
         poll = Poll(
             title=title,
             poll_type=poll_type,
             options=options,
             description=description,
             max_selections=max_selections,
-            closes_at=closes_at
+            closes_at=closes_at,
+            admin_token_hash=hash_admin_token(admin_token),
         )
 
-        # 3. Guardar la votación
+        # 4. Guardar la votación.
         self.poll_repository.save_poll(poll)
 
-        # 4. Devolver la votación
-        return poll
+        # 5. Devolver la votación y el secreto original.
+        return CreatedPoll(
+            poll=poll,
+            admin_token=admin_token,
+        )

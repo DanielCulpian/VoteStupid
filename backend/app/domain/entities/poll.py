@@ -16,6 +16,7 @@ class Poll:
     max_selections: int | None = None
     closes_at: datetime | None = None
     is_active: bool = True
+    admin_token_hash: str | None = None
 
     id: UUID = field(default_factory=uuid4)
     created_at: datetime = field(

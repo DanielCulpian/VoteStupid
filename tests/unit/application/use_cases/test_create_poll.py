@@ -41,23 +41,28 @@ def test_create_poll_successfully():
     repository = FakePollRepository()
     use_case = CreatePoll(repository)
 
-    poll = use_case.execute(
+    result = use_case.execute(
         title="¿Qué hacemos el sábado?",
         option_texts=["Ir al cine", "Ir a cenar"],
         poll_type=PollType.SINGLE_CHOICE
     )
 
+    poll = result.poll
+
     assert poll.title == "¿Qué hacemos el sábado?"
     assert len(poll.options) == 2
     assert poll.poll_type == PollType.SINGLE_CHOICE
     assert repository.get_by_id(poll.id) == poll
+    assert poll.admin_token_hash is not None
+    assert len(poll.admin_token_hash) == 64
+    assert result.admin_token
 
 
 def test_create_poll_with_optional_fields():
     repository = FakePollRepository()
     use_case = CreatePoll(repository)
 
-    poll = use_case.execute(
+    result = use_case.execute(
         title="¿Qué hacemos?",
         option_texts=["Cine", "Cena"],
         poll_type=PollType.MULTIPLE_CHOICE,
@@ -65,8 +70,12 @@ def test_create_poll_with_optional_fields():
         max_selections=2
     )
 
+    poll = result.poll
+
     assert poll.description == "Votación del sábado"
     assert poll.max_selections == 2
+    assert poll.admin_token_hash is not None
+    assert result.admin_token
 
 
 def test_create_poll_rejects_empty_title():

@@ -12,7 +12,14 @@ from app.application.use_cases.create_poll import CreatePoll
 from app.domain.entities.poll import Poll
 from app.domain.repositories.poll_repository import PollRepository
 from app.presentation.api.dependencies import get_poll_repository, get_cast_vote_use_case, get_update_vote_use_case, get_poll_results_use_case
-from app.presentation.api.schemas import CreatePollRequest, PollResponse, CastVoteRequest, VoteResponse, UpdateVoteRequest
+from app.presentation.api.schemas import (
+    CreatePollRequest,
+    PollResponse,
+    PollCreatedResponse,
+    CastVoteRequest,
+    VoteResponse,
+    UpdateVoteRequest,
+)
 from app.application.use_cases.cast_vote import CastVote
 from app.infrastructure.security.voter_token import hash_voter_token
 from app.application.use_cases.update_vote import UpdateVote
@@ -21,6 +28,14 @@ from app.presentation.api.schemas import PollResultsResponse
 from uuid import UUID
 
 from app.application.use_cases.get_poll import GetPoll
+from app.application.use_cases.close_poll import ClosePoll
+from app.application.use_cases.reopen_poll import ReopenPoll
+
+from app.presentation.api.dependencies import (
+    get_admin_poll as get_admin_poll_dependency,
+    get_close_poll_use_case,
+    get_reopen_poll_use_case,
+)
 
 router = APIRouter()
 
@@ -33,7 +48,7 @@ def build_results_message(results: PollResultsResponse) -> dict:
 @router.get("/")
 def home():
     return {
-        "message": "Â¡Bienvenido a VoteStupid!"
+        "message": "¡Bienvenido a VoteStupid!"
     }
 
 
@@ -43,7 +58,7 @@ def get_info():
         "app": "VoteStupid",
         "version": "0.1.0",
         "status": "En desarrollo",
-        "description": "AplicaciÃ³n de votaciones para amigos"
+        "description": "Aplicación de votaciones para amigos"
     }
 
 
@@ -51,21 +66,21 @@ def get_info():
 def get_status():
     return {
         "online": True,
-        "message": "VoteStupid estÃ¡ funcionando"
+        "message": "VoteStupid está funcionando"
     }
 
 @router.post(
     "/api/polls",
-    response_model=PollResponse,
+    response_model=PollCreatedResponse,
     status_code=status.HTTP_201_CREATED
 )
 def create_poll(
     request: CreatePollRequest,
     poll_repository: PollRepository = Depends(get_poll_repository)
-) -> Poll:
+) -> PollCreatedResponse:
     use_case = CreatePoll(poll_repository)
 
-    poll = use_case.execute(
+    result = use_case.execute(
         title=request.title,
         option_texts=request.option_texts,
         poll_type=request.poll_type,
@@ -74,7 +89,20 @@ def create_poll(
         closes_at=request.closes_at
     )
 
-    return poll
+    poll = result.poll
+
+    return PollCreatedResponse(
+        id=poll.id,
+        title=poll.title,
+        description=poll.description,
+        poll_type=poll.poll_type,
+        options=poll.options,
+        max_selections=poll.max_selections,
+        closes_at=poll.closes_at,
+        is_active=poll.is_active,
+        created_at=poll.created_at,
+        admin_token=result.admin_token,
+    )
 
 @router.get(
     "/api/polls/{poll_id}",
@@ -91,7 +119,7 @@ def get_poll(
     if poll is None:
         raise HTTPException(
             status_code=404,
-            detail="La votaciÃ³n no existe."
+            detail="La votación no existe."
         )
 
     return poll
@@ -200,7 +228,7 @@ async def update_vote(
     except ValueError as error:
         message = str(error)
 
-        if "no existe" in message or "todavÃ­a no ha votado" in message:
+        if "no existe" in message or "todavía no ha votado" in message:
             status_code = status.HTTP_404_NOT_FOUND
         elif (
             "cerrada" in message
@@ -260,7 +288,7 @@ def get_poll_results(
     if results is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="La votaciÃ³n no existe.",
+            detail="La votación no existe.",
         )
 
     return PollResultsResponse(
@@ -292,3 +320,63 @@ async def poll_updates(
 
     except WebSocketDisconnect:
         connection_manager.disconnect(poll_id, websocket)
+
+@router.put("/api/admin/polls/{poll_id}/close", response_model=PollResponse)
+def close_poll(
+    poll_id: UUID,
+    admin_poll: Poll = Depends(get_admin_poll_dependency),
+    use_case: ClosePoll = Depends(get_close_poll_use_case),
+):
+    poll = use_case.execute(admin_poll.id)
+
+    return PollResponse(
+        id=poll.id,
+        title=poll.title,
+        description=poll.description,
+        poll_type=poll.poll_type,
+        options=poll.options,
+        max_selections=poll.max_selections,
+        closes_at=poll.closes_at,
+        is_active=poll.is_active,
+        created_at=poll.created_at,
+    )
+
+
+@router.put("/api/admin/polls/{poll_id}/reopen", response_model=PollResponse)
+def reopen_poll(
+    poll_id: UUID,
+    admin_poll: Poll = Depends(get_admin_poll_dependency),
+    use_case: ReopenPoll = Depends(get_reopen_poll_use_case),
+):
+    poll = use_case.execute(admin_poll.id)
+
+    return PollResponse(
+        id=poll.id,
+        title=poll.title,
+        description=poll.description,
+        poll_type=poll.poll_type,
+        options=poll.options,
+        max_selections=poll.max_selections,
+        closes_at=poll.closes_at,
+        is_active=poll.is_active,
+        created_at=poll.created_at,
+    )
+
+@router.get(
+    "/api/admin/polls/{poll_id}",
+    response_model=PollResponse,
+)
+def get_admin_poll_details(
+    admin_poll: Poll = Depends(get_admin_poll_dependency),
+) -> PollResponse:
+    return PollResponse(
+        id=admin_poll.id,
+        title=admin_poll.title,
+        description=admin_poll.description,
+        poll_type=admin_poll.poll_type,
+        options=admin_poll.options,
+        max_selections=admin_poll.max_selections,
+        closes_at=admin_poll.closes_at,
+        is_active=admin_poll.is_active,
+        created_at=admin_poll.created_at,
+    )
