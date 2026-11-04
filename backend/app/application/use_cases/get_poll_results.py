@@ -8,9 +8,11 @@ from app.domain.repositories.poll_repository import PollRepository
 class GetPollResults:
 
     def __init__(self, poll_repository: PollRepository):
+        """Recibe las dependencias necesarias para ejecutar el caso de uso."""
         self.poll_repository = poll_repository
 
     def execute(self, poll_id: UUID) -> PollResults | None:
+        """Calcula votos, puntos y porcentajes según el tipo de votación."""
         poll = self.poll_repository.get_by_id(poll_id)
 
         if poll is None:

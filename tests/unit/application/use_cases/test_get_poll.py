@@ -9,6 +9,7 @@ from app.domain.repositories.poll_repository import PollRepository
 
 
 def test_get_poll_returns_poll_when_it_exists():
+    """Comprueba que la consulta de votaciones devuelve la votación cuando existe."""
     # Arrange: preparamos una votación y un repositorio simulado.
     poll_id = uuid4()
 
@@ -35,6 +36,7 @@ def test_get_poll_returns_poll_when_it_exists():
 
 
 def test_get_poll_returns_none_when_poll_does_not_exist():
+    """Comprueba que la consulta de votaciones devuelve None cuando la votación no existe."""
     # Arrange: simulamos que el repositorio no encuentra la votación.
     poll_id = uuid4()
 

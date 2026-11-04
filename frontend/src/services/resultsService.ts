@@ -15,6 +15,7 @@ export interface PollResults {
   results: OptionResult[]
 }
 
+// Consulta los votos, puntos y porcentajes actuales de una votación.
 export function getPollResults(
   pollId: string,
 ): Promise<PollResults> {

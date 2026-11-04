@@ -2,6 +2,7 @@
 import { apiRequest } from './api'
 import type { PollResponse } from '../types/poll'
 
+// Obtiene los datos de administración usando el token privado de la votación.
 export function getAdminPoll(
   pollId: string,
   adminToken: string,
@@ -16,6 +17,7 @@ export function getAdminPoll(
   )
 }
 
+// Solicita el cierre de la votación con el token de administración.
 export function closePoll(
   pollId: string,
   adminToken: string,
@@ -31,6 +33,7 @@ export function closePoll(
   )
 }
 
+// Solicita la reapertura de la votación con el token de administración.
 export function reopenPoll(
   pollId: string,
   adminToken: string,

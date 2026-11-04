@@ -40,6 +40,7 @@ from app.presentation.api.dependencies import (
 router = APIRouter()
 
 def build_results_message(results: PollResultsResponse) -> dict:
+    """Serializa los resultados en un mensaje de actualización WebSocket."""
     return {
         "type": "results_updated",
         "results": results.model_dump(mode="json"),
@@ -54,6 +55,7 @@ def build_poll_status_message(poll: Poll) -> dict:
 
 @router.get("/")
 def home():
+    """Devuelve el mensaje de bienvenida de la API."""
     return {
         "message": "¡Bienvenido a VoteStupid!"
     }
@@ -61,6 +63,7 @@ def home():
 
 @router.get("/api/info")
 def get_info():
+    """Devuelve el nombre, la versión y la descripción de la aplicación."""
     return {
         "app": "VoteStupid",
         "version": "0.1.0",
@@ -71,6 +74,7 @@ def get_info():
 
 @router.get("/api/status")
 def get_status():
+    """Indica que la API está disponible."""
     return {
         "online": True,
         "message": "VoteStupid está funcionando"
@@ -85,6 +89,7 @@ def create_poll(
     request: CreatePollRequest,
     poll_repository: PollRepository = Depends(get_poll_repository)
 ) -> PollCreatedResponse:
+    """Crea una votación y devuelve sus datos junto con el token de administración."""
     use_case = CreatePoll(poll_repository)
 
     result = use_case.execute(
@@ -119,6 +124,7 @@ def get_poll(
     poll_id: UUID,
     poll_repository: PollRepository = Depends(get_poll_repository)
 ) -> Poll:
+    """Devuelve la votación solicitada o responde con un error si no existe."""
     use_case = GetPoll(poll_repository)
 
     poll = use_case.execute(poll_id)
@@ -148,6 +154,7 @@ async def cast_vote(
     use_case: CastVote = Depends(get_cast_vote_use_case),
     results_use_case: GetPollResults = Depends(get_poll_results_use_case),
 ):
+    """Registra un voto y difunde los resultados actualizados por WebSocket."""
     voter_token_hash = hash_voter_token(x_voter_token)
 
     try:
@@ -224,6 +231,7 @@ async def update_vote(
     use_case: UpdateVote = Depends(get_update_vote_use_case),
     results_use_case: GetPollResults = Depends(get_poll_results_use_case),
 ):
+    """Actualiza el voto existente y difunde los nuevos resultados por WebSocket."""
     voter_token_hash = hash_voter_token(x_voter_token)
 
     try:
@@ -290,6 +298,7 @@ def get_poll_results(
     poll_id: UUID,
     use_case: GetPollResults = Depends(get_poll_results_use_case),
 ) -> PollResultsResponse:
+    """Devuelve los resultados de la votación o un error si no existe."""
     results = use_case.execute(poll_id)
 
     if results is None:
@@ -319,6 +328,7 @@ async def poll_updates(
     websocket: WebSocket,
     poll_id: UUID,
 ):
+    """Mantiene la conexión WebSocket y la elimina cuando el cliente se desconecta."""
     await connection_manager.connect(poll_id, websocket)
 
     try:
@@ -334,6 +344,7 @@ async def close_poll(
     admin_poll: Poll = Depends(get_admin_poll_dependency),
     use_case: ClosePoll = Depends(get_close_poll_use_case),
 ):
+    """Cierra la votación autorizada y difunde su estado por WebSocket."""
     poll = use_case.execute(admin_poll.id)
 
     await connection_manager.broadcast(
@@ -360,6 +371,7 @@ async def reopen_poll(
     admin_poll: Poll = Depends(get_admin_poll_dependency),
     use_case: ReopenPoll = Depends(get_reopen_poll_use_case),
 ):
+    """Reabre la votación autorizada y difunde su estado por WebSocket."""
     poll = use_case.execute(admin_poll.id)
 
     await connection_manager.broadcast(
@@ -386,6 +398,7 @@ async def reopen_poll(
 def get_admin_poll_details(
     admin_poll: Poll = Depends(get_admin_poll_dependency),
 ) -> PollResponse:
+    """Devuelve los datos de la votación tras validar el acceso de administración."""
     return PollResponse(
         id=admin_poll.id,
         title=admin_poll.title,

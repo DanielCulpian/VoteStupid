@@ -5,6 +5,7 @@ from app.domain.entities.vote import Vote
 
 
 def test_create_valid_vote():
+    """Comprueba la creación de un voto con datos válidos."""
     poll_id = uuid4()
     option_ids = [uuid4(), uuid4()]
 
@@ -23,6 +24,7 @@ def test_create_valid_vote():
 
 
 def test_vote_rejects_empty_voter_token_hash():
+    """Comprueba que el voto rechaza un hash de participante vacío."""
     with pytest.raises(ValueError):
         Vote(
             poll_id=uuid4(),
@@ -32,6 +34,7 @@ def test_vote_rejects_empty_voter_token_hash():
 
 
 def test_vote_requires_at_least_one_option():
+    """Comprueba que el voto exige al menos una opción."""
     with pytest.raises(ValueError):
         Vote(
             poll_id=uuid4(),
@@ -41,6 +44,7 @@ def test_vote_requires_at_least_one_option():
 
 
 def test_vote_rejects_duplicate_options():
+    """Comprueba que el voto rechaza opciones repetidas."""
     option_id = uuid4()
 
     with pytest.raises(ValueError):
@@ -51,6 +55,7 @@ def test_vote_rejects_duplicate_options():
         )
 
 def test_update_vote_selection():
+    """Comprueba que cambiar la selección actualiza las opciones y la fecha del voto."""
     vote = Vote(
         poll_id=uuid4(),
         voter_token_hash="anonymous_hash_123",
@@ -70,6 +75,7 @@ def test_update_vote_selection():
 
 
 def test_update_vote_rejects_empty_selection():
+    """Comprueba que la actualización de votos rechaza una selección vacía."""
     vote = Vote(
         poll_id=uuid4(),
         voter_token_hash="anonymous_hash_123",
@@ -81,6 +87,7 @@ def test_update_vote_rejects_empty_selection():
 
 
 def test_update_vote_rejects_duplicate_options():
+    """Comprueba que la actualización de votos rechaza opciones repetidas."""
     vote = Vote(
         poll_id=uuid4(),
         voter_token_hash="anonymous_hash_123",

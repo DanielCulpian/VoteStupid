@@ -19,17 +19,21 @@ from app.domain.repositories.poll_repository import PollRepository
 class FakePollRepository(PollRepository):
 
     def __init__(self):
+        """Inicializa el almacenamiento en memoria del repositorio de prueba."""
         self.polls = {}
         self.votes = {}
         self.options = {}
 
     def get_by_id(self, poll_id):
+        """Busca la votación en el repositorio simulado."""
         return self.polls.get(poll_id)
 
     def get_vote_by_voter(self, poll_id, voter_token_hash):
+        """Busca en memoria el voto del participante para la votación."""
         return self.votes.get((poll_id, voter_token_hash))
 
     def get_votes_by_poll(self, poll_id):
+        """Recupera los votos en memoria asociados a la votación."""
         return [
             vote
             for (stored_poll_id, _), vote in self.votes.items()
@@ -37,12 +41,15 @@ class FakePollRepository(PollRepository):
         ]
 
     def save_vote(self, vote):
+        """Guarda el voto en el repositorio simulado."""
         self.votes[(vote.poll_id, vote.voter_token_hash)] = vote
 
     def update_vote(self, vote):
+        """Sustituye el voto almacenado en el repositorio simulado."""
         self.votes[(vote.poll_id, vote.voter_token_hash)] = vote
 
     def get_options_by_ids(self, poll_id, option_ids):
+        """Simula la consulta de opciones que utiliza este escenario de validación."""
         valid_options = self.options.get(poll_id, set())
         return [
             option_id
@@ -51,12 +58,15 @@ class FakePollRepository(PollRepository):
         ]
 
     def update_poll(self, poll: Poll) -> None:
+        """Sustituye la votación almacenada en el repositorio simulado."""
         self.polls[poll.id] = poll
 
     def save_poll(self, poll):
+        """Guarda la votación en el repositorio simulado."""
         self.polls[poll.id] = poll
 
     def get_votes_by_poll(self, poll_id: UUID) -> list[Vote]:
+        """Simula una consulta sin resultados para este escenario de prueba."""
         return []
 
 def create_poll(
@@ -65,6 +75,7 @@ def create_poll(
     is_active=True,
     closes_at=None
 ):
+    """Construye una votación y sus opciones para preparar el escenario de prueba."""
     options = [
         Option(text="Opción 1"),
         Option(text="Opción 2"),
@@ -84,6 +95,7 @@ def create_poll(
 
 
 def create_vote(poll, voter_token_hash="participant_hash"):
+    """Construye un voto de prueba con las selecciones indicadas."""
     return Vote(
         poll_id=poll.id,
         voter_token_hash=voter_token_hash,
@@ -92,6 +104,7 @@ def create_vote(poll, voter_token_hash="participant_hash"):
 
 
 def create_use_case(repository):
+    """Construye el caso de uso de la prueba con el repositorio indicado."""
     validator = ValidateVoteSelection(repository)
 
     return UpdateVote(
@@ -101,6 +114,7 @@ def create_use_case(repository):
 
 
 def prepare_repository(poll, vote=None):
+    """Prepara el repositorio simulado con una votación y un voto para las pruebas."""
     repository = FakePollRepository()
 
     repository.polls[poll.id] = poll
@@ -117,6 +131,7 @@ def prepare_repository(poll, vote=None):
 # 1. Actualizar un voto correctamente
 
 def test_update_vote_successfully():
+    """Comprueba que la actualización de votos se completa correctamente."""
     poll = create_poll()
     vote = create_vote(poll)
 
@@ -140,6 +155,7 @@ def test_update_vote_successfully():
 # 2. Rechazar una votación inexistente
 
 def test_update_vote_rejects_nonexistent_poll():
+    """Comprueba que la actualización de votos rechaza una votación inexistente."""
     repository = FakePollRepository()
     use_case = create_use_case(repository)
 
@@ -154,6 +170,7 @@ def test_update_vote_rejects_nonexistent_poll():
 # 3. Rechazar una votación cerrada
 
 def test_update_vote_rejects_closed_poll():
+    """Comprueba que la actualización de votos rechaza una votación cerrada."""
     poll = create_poll(is_active=False)
     vote = create_vote(poll)
 
@@ -171,6 +188,7 @@ def test_update_vote_rejects_closed_poll():
 # 4. Rechazar una votación cuya fecha límite ha pasado
 
 def test_update_vote_rejects_expired_poll():
+    """Comprueba que la actualización de votos rechaza una votación cuya fecha de cierre ya ha pasado."""
     poll = create_poll(
         closes_at=datetime.now(timezone.utc) - timedelta(minutes=1)
     )
@@ -193,6 +211,7 @@ def test_update_vote_rejects_expired_poll():
 # 5. Permitir actualizar antes de la fecha límite
 
 def test_update_vote_allows_update_before_closing_date():
+    """Comprueba que la actualización de votos permite modificar el voto antes de la fecha de cierre."""
     poll = create_poll(
         closes_at=datetime.now(timezone.utc) + timedelta(hours=1)
     )
@@ -215,6 +234,7 @@ def test_update_vote_allows_update_before_closing_date():
 # 6. Rechazar la actualización si el participante no ha votado
 
 def test_update_vote_rejects_participant_without_vote():
+    """Comprueba que la actualización de votos rechaza un participante sin voto previo."""
     poll = create_poll()
 
     repository = prepare_repository(poll)
@@ -234,6 +254,7 @@ def test_update_vote_rejects_participant_without_vote():
 # 7. Rechazar una selección vacía
 
 def test_update_vote_rejects_empty_selection():
+    """Comprueba que la actualización de votos rechaza una selección vacía."""
     poll = create_poll()
     vote = create_vote(poll)
 
@@ -254,6 +275,7 @@ def test_update_vote_rejects_empty_selection():
 # 8. Rechazar opciones que no pertenecen a la votación
 
 def test_update_vote_rejects_options_from_another_poll():
+    """Comprueba que la actualización de votos rechaza opciones de otra votación."""
     poll = create_poll()
     other_poll = create_poll()
     vote = create_vote(poll)
@@ -275,6 +297,7 @@ def test_update_vote_rejects_options_from_another_poll():
 # 9. Rechazar opciones duplicadas
 
 def test_update_vote_rejects_duplicate_options():
+    """Comprueba que la actualización de votos rechaza opciones repetidas."""
     poll = create_poll()
     vote = create_vote(poll)
 
@@ -298,6 +321,7 @@ def test_update_vote_rejects_duplicate_options():
 # 10. Rechazar varias opciones en elección única
 
 def test_update_vote_rejects_multiple_options_in_single_choice():
+    """Comprueba que la actualización de votos rechaza varias opciones en elección única."""
     poll = create_poll(PollType.SINGLE_CHOICE)
     vote = create_vote(poll)
 
@@ -321,6 +345,7 @@ def test_update_vote_rejects_multiple_options_in_single_choice():
 # 11. Rechazar superar el máximo de selección múltiple
 
 def test_update_vote_rejects_exceeding_max_selections():
+    """Comprueba que la actualización de votos rechaza superar el máximo de selecciones."""
     poll = create_poll(
         PollType.MULTIPLE_CHOICE,
         max_selections=2
@@ -346,6 +371,7 @@ def test_update_vote_rejects_exceeding_max_selections():
 # 12. Permitir selección múltiple sin límite configurado
 
 def test_update_vote_allows_multiple_choice_without_limit():
+    """Comprueba que la actualización de votos permite elección múltiple sin límite configurado."""
     poll = create_poll(PollType.MULTIPLE_CHOICE)
     vote = create_vote(poll)
 
@@ -368,6 +394,7 @@ def test_update_vote_allows_multiple_choice_without_limit():
 # 13. Rechazar un ranking incompleto
 
 def test_update_vote_rejects_incomplete_ranking():
+    """Comprueba que la actualización de votos rechaza un ranking incompleto."""
     poll = create_poll(PollType.RANKING)
     vote = create_vote(poll)
 
@@ -391,6 +418,7 @@ def test_update_vote_rejects_incomplete_ranking():
 # 14. Permitir un ranking completo
 
 def test_update_vote_allows_complete_ranking():
+    """Comprueba que la actualización de votos acepta un ranking completo."""
     poll = create_poll(PollType.RANKING)
     vote = create_vote(poll)
 
@@ -415,6 +443,7 @@ def test_update_vote_allows_complete_ranking():
 # 15. Conservar la identidad y la fecha de creación del voto
 
 def test_update_vote_preserves_original_vote_identity():
+    """Comprueba que la actualización de votos mantiene el identificador del voto original."""
     poll = create_poll()
     vote = create_vote(poll)
 

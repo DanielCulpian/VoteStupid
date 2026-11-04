@@ -22,6 +22,7 @@ const isUpdating = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 
+// Recupera el token privado, carga la votación y sus resultados y conecta las actualizaciones en directo.
 async function loadAdminPanel() {
   isLoading.value = true
   errorMessage.value = ''
@@ -55,6 +56,7 @@ async function loadAdminPanel() {
 
     poll.value = await getAdminPoll(pollId, savedToken)
     results.value = await getPollResults(pollId)
+    // Actualiza los resultados del panel con cada notificación WebSocket.
     pollSocket = connectToPoll(pollId, updatedResults => {
       results.value = updatedResults as PollResults
     })
@@ -68,6 +70,7 @@ async function loadAdminPanel() {
   }
 }
 
+// Cierra o reabre la votación y actualiza los datos del panel de administración.
 async function updatePollStatus() {
   if (!poll.value || !adminToken.value) return
 
@@ -97,6 +100,7 @@ async function updatePollStatus() {
 
 const publicUrl = `${window.location.origin}/votacion/${pollId}`
 
+// Copia el enlace público de la votación al portapapeles e informa del resultado.
 async function copyPublicLink() {
   try {
     await navigator.clipboard.writeText(publicUrl)
@@ -108,6 +112,7 @@ async function copyPublicLink() {
 
 onMounted(loadAdminPanel)
 
+// Cierra el WebSocket al abandonar la vista para liberar la conexión.
 onUnmounted(() => {
   pollSocket?.close()
   pollSocket = null

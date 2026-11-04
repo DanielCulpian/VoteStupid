@@ -5,6 +5,7 @@ from app.infrastructure.models.vote_selection_model import VoteSelectionModel
 
 
 def to_model(vote: Vote) -> VoteModel:
+    """Convierte el voto y sus selecciones a modelos SQLAlchemy."""
     selections = [
         VoteSelectionModel(
             option_id=option_id,
@@ -24,6 +25,7 @@ def to_model(vote: Vote) -> VoteModel:
 
 
 def to_entity(vote_model: VoteModel) -> Vote:
+    """Reconstruye el voto con sus selecciones ordenadas a partir de los modelos SQLAlchemy."""
     ordered_selections = sorted(
         vote_model.selections,
         key=lambda selection: (

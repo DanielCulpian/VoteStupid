@@ -10,34 +10,44 @@ from app.domain.entities.vote import Vote
 class FakePollRepository(PollRepository):
 
     def __init__(self):
+        """Inicializa el almacenamiento en memoria del repositorio de prueba."""
         self.polls = {}
 
     def save_poll(self, poll):
+        """Guarda la votación en el repositorio simulado."""
         self.polls[poll.id] = poll
 
     def get_by_id(self, poll_id):
+        """Busca la votación en el repositorio simulado."""
         return self.polls.get(poll_id)
 
     def update_poll(self, poll):
+        """Señala que esta operación no está implementada en el repositorio de prueba."""
         raise NotImplementedError
 
     def get_vote_by_voter(self, poll_id, voter_token_hash):
+        """Señala que esta operación no está implementada en el repositorio de prueba."""
         raise NotImplementedError
 
     def save_vote(self, vote):
+        """Señala que esta operación no está implementada en el repositorio de prueba."""
         raise NotImplementedError
 
     def update_vote(self, vote):
+        """Señala que esta operación no está implementada en el repositorio de prueba."""
         raise NotImplementedError
 
     def get_options_by_ids(self, poll_id, option_ids):
+        """Señala que esta operación no está implementada en el repositorio de prueba."""
         raise NotImplementedError
 
     def get_votes_by_poll(self, poll_id: UUID) -> list[Vote]:
+        """Simula una consulta sin resultados para este escenario de prueba."""
         return []
 
 
 def test_create_poll_successfully():
+    """Comprueba que la creación de votaciones se completa correctamente."""
     repository = FakePollRepository()
     use_case = CreatePoll(repository)
 
@@ -59,6 +69,7 @@ def test_create_poll_successfully():
 
 
 def test_create_poll_with_optional_fields():
+    """Comprueba que la creación de votaciones conserva los campos opcionales indicados."""
     repository = FakePollRepository()
     use_case = CreatePoll(repository)
 
@@ -79,6 +90,7 @@ def test_create_poll_with_optional_fields():
 
 
 def test_create_poll_rejects_empty_title():
+    """Comprueba que la creación de votaciones rechaza un título vacío."""
     repository = FakePollRepository()
     use_case = CreatePoll(repository)
 
@@ -91,6 +103,7 @@ def test_create_poll_rejects_empty_title():
 
 
 def test_create_poll_requires_at_least_two_options():
+    """Comprueba que la creación de votaciones exige al menos dos opciones."""
     repository = FakePollRepository()
     use_case = CreatePoll(repository)
 

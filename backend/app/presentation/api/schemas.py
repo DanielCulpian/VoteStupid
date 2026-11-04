@@ -17,6 +17,7 @@ class CreatePollRequest(BaseModel):
     @field_validator("title")
     @classmethod
     def validate_title(cls, value: str) -> str:
+        """Elimina espacios del título y rechaza los títulos vacíos."""
         value = value.strip()
 
         if not value:
@@ -27,6 +28,7 @@ class CreatePollRequest(BaseModel):
     @field_validator("option_texts")
     @classmethod
     def validate_option_texts(cls, value: list[str]) -> list[str]:
+        """Elimina espacios de las opciones y rechaza los textos vacíos."""
         cleaned_options = [option.strip() for option in value]
 
         if any(not option for option in cleaned_options):
@@ -37,6 +39,7 @@ class CreatePollRequest(BaseModel):
     @field_validator("closes_at")
     @classmethod
     def validate_closes_at(cls, value: datetime | None) -> datetime | None:
+        """Exige una zona horaria cuando se indica una fecha de cierre."""
         if value is not None and (
             value.tzinfo is None or value.utcoffset() is None
         ):
@@ -46,6 +49,7 @@ class CreatePollRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_max_selections(self):
+        """Comprueba que el límite de selecciones sea compatible con el tipo y las opciones."""
         if self.poll_type != PollType.MULTIPLE_CHOICE:
             if self.max_selections is not None:
                 raise ValueError(

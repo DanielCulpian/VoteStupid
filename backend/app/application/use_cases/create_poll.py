@@ -15,6 +15,7 @@ from app.infrastructure.security.admin_token import (
 class CreatePoll:
 
     def __init__(self, poll_repository: PollRepository):
+        """Recibe las dependencias necesarias para ejecutar el caso de uso."""
         self.poll_repository = poll_repository
 
     def execute(
@@ -26,6 +27,7 @@ class CreatePoll:
         max_selections: int | None = None,
         closes_at: datetime | None = None
     ) -> CreatedPoll:
+        """Crea y guarda la votación y devuelve su token privado de administración."""
 
         # 1. Generar el secreto de administración.
         admin_token = generate_admin_token()

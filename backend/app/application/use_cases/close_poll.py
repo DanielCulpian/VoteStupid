@@ -7,9 +7,11 @@ from app.domain.repositories.poll_repository import PollRepository
 class ClosePoll:
 
     def __init__(self, poll_repository: PollRepository):
+        """Recibe las dependencias necesarias para ejecutar el caso de uso."""
         self.poll_repository = poll_repository
 
     def execute(self, poll_id: UUID) -> Poll:
+        """Marca la votación como cerrada y guarda el cambio."""
 
         # 1. Buscar la votación
         poll = self.poll_repository.get_by_id(poll_id)

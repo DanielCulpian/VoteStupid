@@ -18,13 +18,16 @@ from app.domain.repositories.poll_repository import PollRepository
 class FakePollRepository:
 
     def __init__(self):
+        """Inicializa el almacenamiento en memoria del repositorio de prueba."""
         self.polls = {}
         self.votes = []
 
     def get_by_id(self, poll_id):
+        """Busca la votación en el repositorio simulado."""
         return self.polls.get(poll_id)
 
     def get_vote_by_voter(self, poll_id, voter_token_hash):
+        """Busca en memoria el voto del participante para la votación."""
         for vote in self.votes:
             if (
                 vote.poll_id == poll_id
@@ -34,6 +37,7 @@ class FakePollRepository:
         return None
 
     def get_options_by_ids(self, poll_id, option_ids):
+        """Simula la consulta de opciones que utiliza este escenario de validación."""
         poll = self.get_by_id(poll_id)
 
         if poll is None:
@@ -48,22 +52,28 @@ class FakePollRepository:
         ]
 
     def save_vote(self, vote):
+        """Guarda el voto en el repositorio simulado."""
         self.votes.append(vote)
 
     def update_vote(self, vote: Vote) -> None:
+        """Sustituye el voto almacenado en el repositorio simulado."""
         self.votes[(vote.poll_id, vote.voter_token_hash)] = vote
 
     def update_poll(self, poll: Poll) -> None:
+        """Sustituye la votación almacenada en el repositorio simulado."""
         self.polls[poll.id] = poll
 
     def save_poll(self, poll):
+        """Guarda la votación en el repositorio simulado."""
         self.polls[poll.id] = poll
 
     def get_votes_by_poll(self, poll_id: UUID) -> list[Vote]:
+        """Simula una consulta sin resultados para este escenario de prueba."""
         return []
 
 
 def create_poll(poll_type, max_selections=None):
+    """Construye una votación y sus opciones para preparar el escenario de prueba."""
     options = [
         Option(text="Opción A"),
         Option(text="Opción B"),
@@ -81,6 +91,7 @@ def create_poll(poll_type, max_selections=None):
 
 
 def create_use_case(repository):
+    """Construye el caso de uso de la prueba con el repositorio indicado."""
     validator = ValidateVoteSelection(repository)
 
     return CastVote(
@@ -90,6 +101,7 @@ def create_use_case(repository):
 
 
 def test_fake_repository_can_store_and_retrieve_poll():
+    """Comprueba que el repositorio simulado guarda y recupera una votación."""
     repository = FakePollRepository()
     poll, options = create_poll(PollType.SINGLE_CHOICE)
 
@@ -99,6 +111,7 @@ def test_fake_repository_can_store_and_retrieve_poll():
 
 
 def test_cast_vote_successfully():
+    """Comprueba que el registro de votos se completa correctamente."""
     repository = FakePollRepository()
     poll, options = create_poll(PollType.SINGLE_CHOICE)
     repository.polls[poll.id] = poll
@@ -117,6 +130,7 @@ def test_cast_vote_successfully():
 
 
 def test_cast_vote_rejects_duplicate_voter():
+    """Comprueba que el registro de votos rechaza un participante que ya ha votado."""
     repository = FakePollRepository()
     poll, options = create_poll(PollType.SINGLE_CHOICE)
     repository.polls[poll.id] = poll
@@ -144,6 +158,7 @@ def test_cast_vote_rejects_duplicate_voter():
 
 
 def test_cast_vote_rejects_closed_poll():
+    """Comprueba que el registro de votos rechaza una votación cerrada."""
     repository = FakePollRepository()
     poll, options = create_poll(PollType.SINGLE_CHOICE)
     poll.is_active = False
@@ -160,6 +175,7 @@ def test_cast_vote_rejects_closed_poll():
 
 
 def test_cast_vote_rejects_nonexistent_poll():
+    """Comprueba que el registro de votos rechaza una votación inexistente."""
     repository = FakePollRepository()
     use_case = create_use_case(repository)
 
@@ -172,6 +188,7 @@ def test_cast_vote_rejects_nonexistent_poll():
 
 
 def test_cast_vote_rejects_empty_selection():
+    """Comprueba que el registro de votos rechaza una selección vacía."""
     repository = FakePollRepository()
     poll, options = create_poll(PollType.SINGLE_CHOICE)
     repository.polls[poll.id] = poll
@@ -190,6 +207,7 @@ def test_cast_vote_rejects_empty_selection():
 
 
 def test_cast_vote_rejects_options_from_another_poll():
+    """Comprueba que el registro de votos rechaza opciones de otra votación."""
     repository = FakePollRepository()
     poll, options = create_poll(PollType.SINGLE_CHOICE)
     other_poll, other_options = create_poll(PollType.SINGLE_CHOICE)
@@ -211,6 +229,7 @@ def test_cast_vote_rejects_options_from_another_poll():
 
 
 def test_cast_vote_rejects_multiple_options_in_single_choice():
+    """Comprueba que el registro de votos rechaza varias opciones en elección única."""
     repository = FakePollRepository()
     poll, options = create_poll(PollType.SINGLE_CHOICE)
     repository.polls[poll.id] = poll
@@ -232,6 +251,7 @@ def test_cast_vote_rejects_multiple_options_in_single_choice():
 
 
 def test_cast_vote_rejects_exceeding_max_selections():
+    """Comprueba que el registro de votos rechaza superar el máximo de selecciones."""
     repository = FakePollRepository()
     poll, options = create_poll(
         PollType.MULTIPLE_CHOICE,
@@ -257,6 +277,7 @@ def test_cast_vote_rejects_exceeding_max_selections():
 
 
 def test_cast_vote_allows_multiple_options_without_limit():
+    """Comprueba que el registro de votos permite varias opciones cuando no se ha fijado un límite."""
     repository = FakePollRepository()
     poll, options = create_poll(PollType.MULTIPLE_CHOICE)
     repository.polls[poll.id] = poll
@@ -277,6 +298,7 @@ def test_cast_vote_allows_multiple_options_without_limit():
 
 
 def test_cast_vote_rejects_incomplete_ranking():
+    """Comprueba que el registro de votos rechaza un ranking incompleto."""
     repository = FakePollRepository()
     poll, options = create_poll(PollType.RANKING)
     repository.polls[poll.id] = poll
@@ -298,6 +320,7 @@ def test_cast_vote_rejects_incomplete_ranking():
 
 
 def test_cast_vote_accepts_complete_ranking():
+    """Comprueba que el registro de votos acepta un ranking completo."""
     repository = FakePollRepository()
     poll, options = create_poll(PollType.RANKING)
     repository.polls[poll.id] = poll
@@ -318,6 +341,7 @@ def test_cast_vote_accepts_complete_ranking():
 
 
 def test_cast_vote_rejects_duplicate_options():
+    """Comprueba que el registro de votos rechaza opciones repetidas."""
     repository = FakePollRepository()
     poll, options = create_poll(PollType.MULTIPLE_CHOICE)
     repository.polls[poll.id] = poll
@@ -339,6 +363,7 @@ def test_cast_vote_rejects_duplicate_options():
 
 
 def test_cast_vote_rejects_expired_poll():
+    """Comprueba que el registro de votos rechaza una votación cuya fecha de cierre ya ha pasado."""
     repository = FakePollRepository()
     poll, options = create_poll(PollType.SINGLE_CHOICE)
     poll.closes_at = datetime.now(timezone.utc)
@@ -358,6 +383,7 @@ def test_cast_vote_rejects_expired_poll():
 
 
 def test_cast_vote_allows_vote_before_closing_date():
+    """Comprueba que el registro de votos permite votar antes de la fecha de cierre."""
     repository = FakePollRepository()
     poll, options = create_poll(PollType.SINGLE_CHOICE)
     poll.closes_at = datetime.now(timezone.utc).replace(year=2099)

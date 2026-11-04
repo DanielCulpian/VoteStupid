@@ -1,6 +1,7 @@
 
 const API_URL = import.meta.env.VITE_API_URL
 
+// Envía una petición a la API y convierte sus errores en mensajes para la interfaz.
 export async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {},

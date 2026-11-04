@@ -12,6 +12,7 @@ from app.infrastructure.repositories.sqlalchemy_poll_repository import (
 from app.presentation.api.dependencies import get_poll_repository
 
 def test_get_poll_returns_200_when_poll_exists(db_session):
+    """Comprueba que la consulta de votaciones responde con HTTP 200 cuando la votación existe."""
     # Arrange: guardamos una votación real en la base de datos de pruebas.
     poll = Poll(
         title="¿Cuál es la mejor opción?",
@@ -46,6 +47,7 @@ def test_get_poll_returns_200_when_poll_exists(db_session):
 
 
 def test_get_poll_returns_404_when_poll_does_not_exist(db_session):
+    """Comprueba que la consulta de votaciones responde con HTTP 404 cuando la votación no existe."""
     # Arrange: preparamos un repositorio sin esa votación.
     repository = SqlAlchemyPollRepository(db_session)
 
@@ -63,6 +65,7 @@ def test_get_poll_returns_404_when_poll_does_not_exist(db_session):
         app.dependency_overrides.clear()
 
 def test_create_poll_returns_201_when_data_is_valid(db_session):
+    """Comprueba que la creación de votaciones responde con HTTP 201 cuando los datos son válidos."""
     repository = SqlAlchemyPollRepository(db_session)
     app.dependency_overrides[get_poll_repository] = lambda: repository
 
@@ -86,6 +89,7 @@ def test_create_poll_returns_201_when_data_is_valid(db_session):
         app.dependency_overrides.clear()
 
 def test_create_poll_returns_422_when_title_is_empty(db_session):
+    """Comprueba que la creación de votaciones responde con HTTP 422 cuando el título está vacío."""
     repository = SqlAlchemyPollRepository(db_session)
     app.dependency_overrides[get_poll_repository] = lambda: repository
 
@@ -104,6 +108,7 @@ def test_create_poll_returns_422_when_title_is_empty(db_session):
         app.dependency_overrides.clear()
 
 def test_create_poll_returns_422_when_max_selections_is_invalid(db_session):
+    """Comprueba que la creación de votaciones responde con HTTP 422 ante un límite de selecciones inválido."""
     repository = SqlAlchemyPollRepository(db_session)
     app.dependency_overrides[get_poll_repository] = lambda: repository
 
@@ -123,6 +128,7 @@ def test_create_poll_returns_422_when_max_selections_is_invalid(db_session):
         app.dependency_overrides.clear()
 
 def test_cast_vote_returns_201_when_data_is_valid(db_session):
+    """Comprueba que el registro de votos responde con HTTP 201 cuando los datos son válidos."""
     # Arrange
     poll = Poll(
         title="Mejor opción",
@@ -162,6 +168,7 @@ def test_cast_vote_returns_201_when_data_is_valid(db_session):
 
 
 def test_cast_vote_returns_409_when_voter_has_already_voted(db_session):
+    """Comprueba que el registro de votos responde con HTTP 409 si el participante ya ha votado."""
     # Arrange
     poll = Poll(
         title="Mejor opción",
@@ -208,6 +215,7 @@ def test_cast_vote_returns_409_when_voter_has_already_voted(db_session):
 
 
 def test_cast_vote_returns_422_when_voter_token_is_missing(db_session):
+    """Comprueba que el registro de votos responde con HTTP 422 si falta el token del participante."""
     # Arrange
     poll = Poll(
         title="Mejor opción",
@@ -244,6 +252,7 @@ def test_cast_vote_returns_422_when_voter_token_is_missing(db_session):
 def test_cast_vote_returns_422_when_option_does_not_belong_to_poll(
     db_session,
 ):
+    """Comprueba que el registro de votos responde con HTTP 422 ante una opción de otra votación."""
     # Arrange
     poll = Poll(
         title="Mejor opción",
@@ -276,6 +285,7 @@ def test_cast_vote_returns_422_when_option_does_not_belong_to_poll(
 
 
 def test_cast_vote_returns_409_when_poll_is_closed(db_session):
+    """Comprueba que el registro de votos responde con HTTP 409 si la votación está cerrada."""
     # Arrange
     poll = Poll(
         title="Mejor opción",
@@ -312,6 +322,7 @@ def test_cast_vote_returns_409_when_poll_is_closed(db_session):
         app.dependency_overrides.clear()
 
 def test_update_vote_returns_200_when_vote_exists(db_session):
+    """Comprueba que la actualización de votos responde con HTTP 200 al modificar un voto existente."""
     poll = Poll(
         title="Mejor opción",
         poll_type=PollType.SINGLE_CHOICE,
@@ -356,6 +367,7 @@ def test_update_vote_returns_200_when_vote_exists(db_session):
         app.dependency_overrides.clear()
 
 def test_update_vote_returns_404_when_voter_has_not_voted(db_session):
+    """Comprueba que la actualización de votos responde con HTTP 404 si el participante no ha votado."""
     poll = Poll(
         title="Mejor opción",
         poll_type=PollType.SINGLE_CHOICE,
@@ -387,6 +399,7 @@ def test_update_vote_returns_404_when_voter_has_not_voted(db_session):
         app.dependency_overrides.clear()
 
 def test_update_vote_returns_409_when_poll_is_closed(db_session):
+    """Comprueba que la actualización de votos responde con HTTP 409 si la votación está cerrada."""
     poll = Poll(
         title="Mejor opción",
         poll_type=PollType.SINGLE_CHOICE,
@@ -431,6 +444,7 @@ def test_update_vote_returns_409_when_poll_is_closed(db_session):
         app.dependency_overrides.clear()
 
 def test_update_vote_returns_422_when_selection_is_invalid(db_session):
+    """Comprueba que la actualización de votos responde con HTTP 422 ante una selección inválida."""
     poll = Poll(
         title="Mejor opción",
         poll_type=PollType.SINGLE_CHOICE,
@@ -475,6 +489,7 @@ def test_update_vote_returns_422_when_selection_is_invalid(db_session):
         app.dependency_overrides.clear()
 
 def test_get_poll_results_returns_200_when_poll_has_votes(db_session):
+    """Comprueba que la consulta de resultados responde con HTTP 200 cuando hay votos."""
     poll = Poll(
         title="Mejor opción",
         poll_type=PollType.SINGLE_CHOICE,
@@ -537,6 +552,7 @@ def test_get_poll_results_returns_200_when_poll_has_votes(db_session):
 
 
 def test_get_poll_results_returns_zero_when_poll_has_no_votes(db_session):
+    """Comprueba que la consulta de resultados devuelve valores a cero cuando no hay votos."""
     poll = Poll(
         title="Votación sin participantes",
         poll_type=PollType.SINGLE_CHOICE,
@@ -571,6 +587,7 @@ def test_get_poll_results_returns_zero_when_poll_has_no_votes(db_session):
 
 
 def test_get_poll_results_returns_404_when_poll_does_not_exist(db_session):
+    """Comprueba que la consulta de resultados responde con HTTP 404 cuando la votación no existe."""
     repository = SqlAlchemyPollRepository(db_session)
     app.dependency_overrides[get_poll_repository] = lambda: repository
 
@@ -587,6 +604,7 @@ def test_get_poll_results_returns_404_when_poll_does_not_exist(db_session):
 
 
 def test_get_poll_results_calculates_ranking_points(db_session):
+    """Comprueba que la consulta de resultados calcula los puntos del ranking."""
     poll = Poll(
         title="Ranking de opciones",
         poll_type=PollType.RANKING,

@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def get_database_url() -> str:
+    """Lee DATABASE_URL y rechaza una configuración sin conexión definida."""
     database_url = os.getenv("DATABASE_URL")
 
     if not database_url:

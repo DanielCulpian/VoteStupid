@@ -29,6 +29,7 @@ const hasVoted = ref(false)
 
 let socket: WebSocket | null = null
 
+// Guarda las opciones del voto en el navegador para recuperarlas al volver a la votación.
 function saveVoteLocally(optionIds: string[]) {
   if (!poll.value) return
 
@@ -38,6 +39,7 @@ function saveVoteLocally(optionIds: string[]) {
   )
 }
 
+// Carga los resultados de la votación y actualiza los indicadores de carga y error.
 async function loadResults() {
   if (!poll.value) return
 
@@ -56,6 +58,7 @@ async function loadResults() {
   }
 }
 
+// Carga la votación, recupera el voto local y suscribe los cambios en directo al montar la vista.
 onMounted(async () => {
   try {
     poll.value = await getPoll(String(route.params.id))
@@ -63,9 +66,11 @@ onMounted(async () => {
     if (poll.value) {
       socket = connectToPoll(
         poll.value.id,
+        // Refleja los resultados recibidos sin recargar la vista.
         updatedResults => {
           results.value = updatedResults as PollResults
         },
+        // Aplica el estado recibido para bloquear o habilitar los controles.
         isActive => {
           if (poll.value) {
             poll.value.is_active = isActive
@@ -224,6 +229,7 @@ async function submitVote() {
     isSubmitting.value = false
   }
 }
+// Cierra el WebSocket al abandonar la vista para liberar la conexión.
 onUnmounted(() => {
   socket?.close()
 })

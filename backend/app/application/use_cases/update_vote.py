@@ -16,6 +16,7 @@ class UpdateVote:
         poll_repository: PollRepository,
         validate_vote_selection: ValidateVoteSelection
     ):
+        """Recibe las dependencias necesarias para ejecutar el caso de uso."""
         self.poll_repository = poll_repository
         self.validate_vote_selection = validate_vote_selection
 
@@ -25,6 +26,7 @@ class UpdateVote:
         voter_token_hash: str,
         selected_option_ids: list[UUID]
     ) -> Vote:
+        """Valida la votación y la selección antes de modificar el voto del participante."""
 
         # 1. Obtener la votación
         poll = self.poll_repository.get_by_id(poll_id)

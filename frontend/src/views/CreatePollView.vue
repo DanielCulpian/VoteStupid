@@ -18,15 +18,18 @@ const isSubmitting = ref(false)
 const errorMessage = ref('')
 const createdPoll = ref<PollCreatedResponse | null>(null)
 
+// Añade una opción vacía al formulario de creación de votaciones.
 function addOption() {
   options.value.push('')
 }
 
+// Elimina una opción del formulario conservando al menos dos opciones.
 function removeOption(index: number) {
   if (options.value.length <= 2) return
   options.value.splice(index, 1)
 }
 
+// Valida el formulario, crea la votación y prepara sus enlaces público y de administración.
 async function submitPoll() {
   errorMessage.value = ''
   createdPoll.value = null

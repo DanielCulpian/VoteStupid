@@ -17,6 +17,7 @@ from app.infrastructure.models.vote_selection_model import VoteSelectionModel
 
 @pytest.fixture(scope="session")
 def test_engine():
+    """Prepara el motor de votestupid_test y crea y elimina las tablas de la sesión de pruebas."""
     database_url = make_url(get_database_url()).set(
         database="votestupid_test",
         host="127.0.0.1"
@@ -49,6 +50,7 @@ def test_engine():
 
 @pytest.fixture
 def db_session(test_engine):
+    """Proporciona una sesión de base de datos para la prueba y la cierra al finalizar."""
     session = Session(test_engine)
 
     try:

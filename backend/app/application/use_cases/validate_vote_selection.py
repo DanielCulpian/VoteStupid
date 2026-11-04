@@ -8,6 +8,7 @@ from app.domain.repositories.poll_repository import PollRepository
 class ValidateVoteSelection:
 
     def __init__(self, poll_repository: PollRepository):
+        """Recibe las dependencias necesarias para ejecutar el caso de uso."""
         self.poll_repository = poll_repository
 
     def execute(
@@ -15,6 +16,7 @@ class ValidateVoteSelection:
         poll: Poll,
         selected_option_ids: list[UUID]
     ) -> None:
+        """Comprueba pertenencia, duplicados y límites de las opciones según el tipo de votación."""
 
         # 1. Comprobar que se ha seleccionado alguna opción
         if not selected_option_ids:
