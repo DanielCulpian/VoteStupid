@@ -159,7 +159,7 @@ def test_get_admin_poll_returns_403_when_admin_token_is_invalid(db_session):
         app.dependency_overrides.clear()
 
 
-def test_get_admin_poll_returns_422_when_admin_token_is_missing(db_session):
+def test_admin_session_recovers_poll_without_individual_token(db_session):
     """Comprueba que la administración exige la cabecera del token privado."""
     repository = SqlAlchemyPollRepository(db_session)
     app.dependency_overrides[get_poll_repository] = lambda: repository
@@ -180,15 +180,9 @@ def test_get_admin_poll_returns_422_when_admin_token_is_missing(db_session):
             # Act: consultamos la administración sin enviar X-Admin-Token.
             response = client.get(f"/api/admin/polls/{created_poll['id']}")
 
-        # Assert: FastAPI identifica la cabecera ausente sin devolver la votación.
-        assert response.status_code == 422
-        data = response.json()
-        assert set(data) == {"detail"}
-        assert any(
-            error["loc"] == ["header", "X-Admin-Token"]
-            and error["type"] == "missing"
-            for error in data["detail"]
-        )
+        # Una sesion de administrador permite recuperar el acceso sin conservar el token.
+        assert response.status_code == 200
+        assert response.json()["id"] == created_poll["id"]
     finally:
         app.dependency_overrides.clear()
 

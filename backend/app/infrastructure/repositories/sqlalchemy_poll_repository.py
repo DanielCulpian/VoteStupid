@@ -1,6 +1,7 @@
 from uuid import UUID
+from datetime import datetime, timezone
 
-from sqlalchemy import select, func
+from sqlalchemy import select, func, and_, or_, case
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
@@ -20,6 +21,20 @@ from app.infrastructure.models.vote_model import VoteModel
 from app.infrastructure.models.vote_selection_model import VoteSelectionModel
 
 class SqlAlchemyPollRepository(PollRepository):
+
+    def list_polls(self, state="all", poll_type=None, offset=0, limit=24):
+        """Filtra y ordena primero abiertas y después recientes, considerando el cierre programado."""
+        active = and_(PollModel.is_active.is_(True), or_(PollModel.closes_at.is_(None), PollModel.closes_at > datetime.now(timezone.utc)))
+        filters = []
+        if state != "all":
+            filters.append(active if state == "active" else ~active)
+        if poll_type:
+            filters.append(PollModel.poll_type == poll_type)
+        total = self.session.scalar(select(func.count()).select_from(PollModel).where(*filters))
+        rows = self.session.scalars(select(PollModel).options(selectinload(PollModel.options)).where(*filters)
+            .order_by(case((active, 0), else_=1), PollModel.created_at.desc(), PollModel.id.desc())
+            .offset(offset).limit(limit)).all()
+        return [poll_to_entity(row) for row in rows], total
 
     def __init__(self, session: Session):
         """Asocia el repositorio a la sesión SQLAlchemy recibida."""

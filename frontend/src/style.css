@@ -1,6 +1,48 @@
 
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
+.catalog { width: 100%; max-width: 1320px; margin: 56px auto; scroll-margin-top: 24px; }
+.catalog-heading { display: flex; justify-content: space-between; align-items: end; gap: 24px; padding-bottom: 28px; border-bottom: 1px solid #d6d0c7; }
+.catalog-heading h2 { font-family: 'Space Grotesk', sans-serif; font-size: clamp(2rem, 4vw, 3.5rem); letter-spacing: -.05em; line-height: 1.1; margin: 12px 0 0; }
+.catalog-heading > p { color: #665e55; line-height: 1.6; flex-shrink: 0; }
+.catalog-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 16px; padding: 28px 0 16px; }
+.catalog-filters > div { flex: 1; min-width: 180px; }
+.catalog-filters label { display: block; font-weight: 600; font-size: .85rem; margin-bottom: 8px; }
+.catalog-filters select { width: 100%; min-height: 52px; padding: 12px 16px; background: #fffdf9; border: 1px solid #bbb3a8; border-radius: 12px; font: inherit; color: inherit; }
+.catalog-filters button, .private-nav button, .catalog-empty button, .catalog > button { padding: 12px 20px; border: 1px solid #bbb3a8; border-radius: 12px; background: transparent; cursor: pointer; }
+.catalog-count { color: #665e55; font-size: .9rem; padding: 8px 0; }
+.poll-grid { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
+.poll-card { display: flex; flex-direction: column; min-width: 0; min-height: 310px; padding: 26px; border: 1px solid #d6d0c7; border-radius: 22px; background: #fffdf9; box-shadow: 0 5px 0 #ece6dc; }
+.poll-card-top { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; align-items: center; }
+.type-chip { color: #645c51; font-size: .75rem; font-weight: 600; letter-spacing: .02em; }
+.status-chip { font-size: .75rem; padding: 7px 10px; border-radius: 50px; color: #5f5850; background: #eeeae4; }
+.status-chip.active { background: #e7efe4; color: #315b32; }
+.poll-card h3 { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; line-height: 1.25; letter-spacing: -.03em; margin: 28px 0 16px; }
+.poll-card-description { color: #665e55; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.poll-card time { color: #665e55; font-size: .82rem; margin-top: auto; padding-top: 22px; }
+.poll-card-link { display: flex; justify-content: space-between; align-items: center; min-height: 52px; margin-top: 20px; padding: 12px 16px; border-radius: 12px; color: #fff; background: var(--accent); text-decoration: none; font-weight: 600; }
+.poll-card-closed { background: #f3f0e9; box-shadow: none; }
+.poll-card-closed .poll-card-link { color: #29251f; background: #e7e1d6; }
+.catalog-empty { padding: 52px 24px; border: 1px dashed #bdb3a5; text-align: center; border-radius: 20px; }
+.private-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 24px; }
+.private-nav a { color: inherit; padding: 12px 0; }
+.dashboard-title { font-family: 'Space Grotesk', sans-serif; font-size: clamp(2.4rem, 5vw, 4.7rem); letter-spacing: -.05em; line-height: 1.1; margin: 30px 0; }
+.login-panel { max-width: 520px; width: 100%; margin: 80px auto; }
+.login-panel h1 { font-family: 'Space Grotesk', sans-serif; font-size: clamp(2.5rem, 5vw, 4rem); letter-spacing: -.05em; line-height: 1.05; }
+.login-panel form { display: grid; gap: 18px; margin-top: 36px; }
+.login-panel input { min-height: 52px; width: 100%; padding: 14px; border-radius: 12px; border: 1px solid #aaa; font: inherit; }
+@media (max-width: 1000px) { .poll-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) {
+  .poll-grid { grid-template-columns: 1fr; }
+  .catalog-heading { align-items: start; flex-direction: column; }
+  .catalog-heading > p { margin: 0; }
+  .catalog-filters > div { flex-basis: 100%; }
+  .catalog-filters > button { width: 100%; }
+  .poll-card { min-height: 280px; padding: 22px; }
+  .private-nav { gap: 12px; }
+  .login-panel { margin: 48px auto; }
+}
+
 :root {
   --accent: #b63824;
   font-family: 'DM Sans', sans-serif;

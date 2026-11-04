@@ -66,11 +66,13 @@ export async function apiRequest<T>(
 ): Promise<T> {
   const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS)
   const headers = new Headers(options.headers)
+  headers.set('X-Requested-With', 'VoteStupid')
   if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
 
   try {
     const response = await fetch(`${API_URL}${endpoint}`, {
       ...options,
+      credentials: 'include',
       headers,
       signal: options.signal ? AbortSignal.any([options.signal, timeout]) : timeout,
     })
@@ -80,7 +82,12 @@ export async function apiRequest<T>(
       return null
     })
 
-    if (!response.ok) throw new ApiError(responseMessage(response.status, data), response.status)
+    if (!response.ok) {
+      if (response.status === 401 && endpoint !== '/api/admin/auth/login' && typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+        window.dispatchEvent(new Event('admin-session-expired'))
+      }
+      throw new ApiError(responseMessage(response.status, data), response.status)
+    }
     if (data === null) throw new ApiError('El servidor ha devuelto una respuesta inesperada. Vuelve a intentarlo.', response.status)
     return data as T
   } catch (error) {

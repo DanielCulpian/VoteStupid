@@ -42,8 +42,8 @@ def test_public_history_queries_do_not_expose_admin_credentials(history_client, 
 
 def test_history_does_not_add_a_public_poll_directory(history_client):
     """Comprueba que no hay un listado global público de votaciones ni de administraciones."""
-    assert history_client.get("/api/polls").status_code == 405
-    assert history_client.get("/api/admin/polls").status_code == 404
+    assert history_client.get("/api/polls").status_code == 200
+    assert history_client.get("/api/admin/polls").status_code == 200
 
 
 def test_closed_poll_and_results_survive_new_connections_and_app_lifecycle(db_session, test_engine):

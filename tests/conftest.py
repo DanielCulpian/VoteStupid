@@ -19,9 +19,14 @@ from app.infrastructure.models.vote_selection_model import VoteSelectionModel
 def isolate_api_limits():
     """Aísla los cupos entre pruebas sin desactivar la protección de la aplicación."""
     from app.main import app
+    from app.infrastructure.security.admin_session import require_admin_session
+    # Las regresiones anteriores representan a un organizador autenticado.
+    # Las nuevas pruebas de autenticación usan instancias sin esta sustitución.
+    app.dependency_overrides[require_admin_session] = lambda: None
     app.state.rate_limiter.clear()
     yield
     app.state.rate_limiter.clear()
+    app.dependency_overrides.pop(require_admin_session, None)
 
 
 @pytest.fixture(scope="session")

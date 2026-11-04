@@ -108,33 +108,10 @@ async function loadAdminPanel() {
   errorMessage.value = ''
 
   try {
-    const storageKey = `votestupid:admin-token:${pollId}`
-
-    const tokenFromUrl = new URLSearchParams(
-      window.location.hash.slice(1),
-    ).get('token')
-
-    if (tokenFromUrl) {
-      sessionStorage.setItem(storageKey, tokenFromUrl)
-
-      window.history.replaceState(
-        null,
-        '',
-        window.location.pathname + window.location.search,
-      )
-    }
-
-    const savedToken = sessionStorage.getItem(storageKey)
-
-    if (!savedToken) {
-      throw new Error(
-        'El enlace privado de administración está incompleto. Abre el enlace completo que recibiste al crear la votación.',
-      )
-    }
-
-    adminToken.value = savedToken
-
-    poll.value = await getAdminPoll(pollId, savedToken)
+    const tokenFromUrl = new URLSearchParams(window.location.hash.slice(1)).get('token')
+    adminToken.value = tokenFromUrl ?? ''
+    window.history.replaceState(null, '', window.location.pathname + window.location.search)
+    poll.value = await getAdminPoll(pollId, adminToken.value)
     if (isDisposed) return
     rememberCurrentPoll()
     await loadResults()
@@ -151,7 +128,7 @@ async function loadAdminPanel() {
 
 // Cierra o reabre la votación y actualiza los datos del panel de administración.
 async function updatePollStatus() {
-  if (!poll.value || !adminToken.value || isUpdating.value || isLoading.value) return
+  if (!poll.value || isUpdating.value || isLoading.value) return
   const restoreFocus = document.activeElement?.id === 'admin-status'
 
   isUpdating.value = true
@@ -213,7 +190,7 @@ onUnmounted(() => {
     <LiveAnnouncer :message="isUpdating ? 'Guardando el estado de la votación.' : successMessage" />
     <nav class="header" aria-label="Navegación principal">
       <RouterLink class="logo" to="/">VoteStupid<span>!</span></RouterLink>
-      <RouterLink class="history-nav" to="/historial">Histórico</RouterLink>
+      <RouterLink class="history-nav" to="/admin">Histórico</RouterLink>
     </nav>
     <header>
       <h1 id="page-title" tabindex="-1">Panel de administración</h1>

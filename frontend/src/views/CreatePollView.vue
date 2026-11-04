@@ -107,16 +107,11 @@ async function submitPoll() {
       `${window.location.origin}/votacion/${poll.id}`
 
     adminUrl.value =
-      `${window.location.origin}/admin/${poll.id}#token=${encodeURIComponent(poll.admin_token)}`
+      `${window.location.origin}/admin/${poll.id}`
     try {
       rememberPoll(poll)
     } catch (error) {
       historyWarning.value = error instanceof Error ? error.message : 'No se ha podido guardar el histórico. Guarda los enlaces de tu votación.'
-    }
-    try {
-      sessionStorage.setItem(`votestupid:admin-token:${poll.id}`, poll.admin_token)
-    } catch {
-      historyWarning.value += ' No se puede conservar el acceso de administración en esta sesión. Guarda y utiliza el enlace privado.'
     }
     await nextTick()
     document.getElementById('creation-success')?.focus()
@@ -138,7 +133,7 @@ async function submitPoll() {
       <RouterLink class="logo" to="/">
         VoteStupid<span>!</span>
       </RouterLink>
-      <RouterLink class="history-nav" to="/historial">Histórico</RouterLink>
+      <RouterLink class="history-nav" to="/admin">Histórico</RouterLink>
     </header>
 
     <section class="form-container">
@@ -159,16 +154,11 @@ async function submitPoll() {
         </div>
 
         <div class="created-link">
-          <h3>Enlace privado de administración</h3>
-          <a :href="adminUrl">
-            Abrir panel de administración →
-          </a>
-          <p>
-            Guarda este enlace. Cualquiera que lo tenga podrá administrar
-            tu votación.
-          </p>
+          <h3>Administrar esta votación</h3>
+          <RouterLink :to="`/admin/${createdPoll.id}`">Abrir administración</RouterLink>
+          <p>El acceso requiere tu sesión de administrador.</p>
         </div>
-        <RouterLink class="history-nav" to="/historial">Ver mis votaciones anteriores</RouterLink>
+        <RouterLink class="history-nav" to="/admin">Volver a administración</RouterLink>
       </div>
 
       <form

@@ -11,6 +11,8 @@ from app.presentation.api.dependencies import get_poll_repository
 def secure_client(db_session):
     """Usa PostgreSQL de pruebas con todas las protecciones activas en una API nueva."""
     app = create_app()
+    from app.infrastructure.security.admin_session import require_admin_session
+    app.dependency_overrides[require_admin_session] = lambda: None
     repository = SqlAlchemyPollRepository(db_session)
     app.dependency_overrides[get_poll_repository] = lambda: repository
     with TestClient(app) as client:

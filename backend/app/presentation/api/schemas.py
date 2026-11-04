@@ -90,6 +90,24 @@ class PollResponse(BaseModel):
 class PollCreatedResponse(PollResponse):
     admin_token: str
 
+
+class PollSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    title: str
+    description: str | None
+    poll_type: PollType
+    created_at: datetime
+    is_active: bool
+    closes_at: datetime | None
+
+
+class PollPage(BaseModel):
+    items: list[PollSummary]
+    total: int
+    offset: int
+    limit: int
+
 class CastVoteRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     selected_option_ids: list[UUID] = Field(min_length=1, max_length=50)

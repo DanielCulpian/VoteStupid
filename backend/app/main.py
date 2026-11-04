@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 
 from app.infrastructure.security.api_protection import ApiProtection, RateLimiter, SafeAccessLog, allowed_origins
 from app.presentation.api.routes import router
+from app.presentation.api.auth_routes import router as auth_router
 
 
 async def validation_error(request: Request, error: RequestValidationError):
@@ -33,15 +34,16 @@ def create_app() -> FastAPI:
     application.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
-        allow_credentials=False,
-        allow_methods=["GET", "POST", "PUT"],
-        allow_headers=["Content-Type", "X-Admin-Token", "X-Voter-Token"],
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "DELETE"],
+        allow_headers=["Content-Type", "X-Admin-Token", "X-Voter-Token", "X-Requested-With"],
         expose_headers=["Retry-After"],
     )
     for name in ["uvicorn.access", "uvicorn.error"]:
         logger = logging.getLogger(name)
         if not any(isinstance(filter_, SafeAccessLog) for filter_ in logger.filters):
             logger.addFilter(SafeAccessLog())
+    application.include_router(auth_router)
     application.include_router(router)
     return application
 

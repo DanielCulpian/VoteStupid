@@ -39,7 +39,7 @@ class TestApiError extends Error {
 
 // Construye la vista con el servicio real de almacenamiento y respuestas HTTP controladas.
 function historyView(context, getPoll, getAdminPoll = async () => firstPoll) {
-  return loadView('HistoryView.vue', {
+  return loadView('LegacyHistoryView.vue', {
     '../services/historyService': context.service,
     '../services/pollService': { getPoll },
     '../services/adminService': { getAdminPoll },
@@ -208,7 +208,7 @@ test('registra automáticamente las nuevas votaciones sin guardar el token perma
   view.options.value = ['A', 'B']
   await view.submitPoll()
   assert.equal(context.service.getPollHistory()[0].id, firstPoll.id)
-  assert.equal(context.session.get(`votestupid:admin-token:${firstPoll.id}`), token)
+  assert.equal(context.session.get(`votestupid:admin-token:${firstPoll.id}`), undefined)
   assert.equal(view.historyWarning.value, '')
   assert.doesNotMatch([...context.stored.values()].join(''), /token/)
 })
@@ -231,5 +231,5 @@ test('conserva la confirmación y los enlaces cuando no se puede recordar la vot
   assert.equal(view.createdPoll.value.id, firstPoll.id)
   assert.equal(view.errorMessage.value, '')
   assert.match(view.historyWarning.value, /guardar el histórico/)
-  assert.match(view.adminUrl.value, /#token=/)
+  assert.doesNotMatch(view.adminUrl.value, /#token=/)
 })

@@ -1,4 +1,9 @@
 from app.domain.vote_rule_error import VoteRuleError
+from typing import Literal
+from fastapi import Query
+from app.infrastructure.security.admin_session import require_admin_session
+from app.presentation.api.schemas import PollPage, PollSummary
+from app.domain.entities.poll_type import PollType
 from fastapi import (
     APIRouter,
     Depends,
@@ -84,9 +89,10 @@ def get_status():
 @router.post(
     "/api/polls",
     response_model=PollCreatedResponse,
-    status_code=status.HTTP_201_CREATED
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_admin_session)],
 )
-def create_poll(
+async def create_poll(
     request: CreatePollRequest,
     poll_repository: PollRepository = Depends(get_poll_repository)
 ) -> PollCreatedResponse:
@@ -104,6 +110,8 @@ def create_poll(
 
     poll = result.poll
 
+    await connection_manager.broadcast(UUID(int=0), build_poll_status_message(poll))
+
     return PollCreatedResponse(
         id=poll.id,
         title=poll.title,
@@ -116,6 +124,29 @@ def create_poll(
         created_at=poll.created_at,
         admin_token=result.admin_token,
     )
+
+@router.get("/api/polls", response_model=PollPage)
+def list_public_polls(
+    state: Literal["all", "active", "inactive"] = "all",
+    poll_type: PollType | None = None,
+    offset: int = Query(0, ge=0, le=1000000),
+    limit: int = Query(24, ge=1, le=100),
+    repository: PollRepository = Depends(get_poll_repository),
+):
+    """Publica únicamente metadatos y aplica filtros combinables con paginación estable."""
+    polls, total = repository.list_polls(state, poll_type.value if poll_type else None, offset, limit)
+    return PollPage(items=[PollSummary.model_validate(poll) for poll in polls], total=total, offset=offset, limit=limit)
+
+
+@router.get("/api/admin/polls", response_model=PollPage, dependencies=[Depends(require_admin_session)])
+def list_admin_polls(
+    state: Literal["all", "active", "inactive"] = "all", poll_type: PollType | None = None,
+    offset: int = Query(0, ge=0, le=1000000), limit: int = Query(24, ge=1, le=100),
+    repository: PollRepository = Depends(get_poll_repository),
+):
+    """Permite al administrador recuperar todas las votaciones sin sus enlaces secretos."""
+    return list_public_polls(state, poll_type, offset, limit, repository)
+
 
 @router.get(
     "/api/polls/{poll_id}",
@@ -326,6 +357,21 @@ def get_poll_results(
         ],
     )
 
+@router.websocket("/api/polls/catalog/ws")
+async def catalog_updates(websocket: WebSocket):
+    """Notifica cambios públicos del catálogo utilizando una única suscripción por visitante."""
+    await connection_manager.connect(UUID(int=0), websocket)
+    try:
+        while True:
+            message = await websocket.receive()
+            if message["type"] == "websocket.disconnect":
+                break
+            await websocket.close(code=1008)
+            break
+    finally:
+        connection_manager.disconnect(UUID(int=0), websocket)
+
+
 @router.websocket("/api/polls/{poll_id}/ws")
 async def poll_updates(
     websocket: WebSocket,
@@ -361,6 +407,7 @@ async def close_poll(
         poll.id,
         build_poll_status_message(poll),
     )
+    await connection_manager.broadcast(UUID(int=0), build_poll_status_message(poll))
 
     return PollResponse(
         id=poll.id,
@@ -388,6 +435,7 @@ async def reopen_poll(
         poll.id,
         build_poll_status_message(poll),
     )
+    await connection_manager.broadcast(UUID(int=0), build_poll_status_message(poll))
 
     return PollResponse(
         id=poll.id,

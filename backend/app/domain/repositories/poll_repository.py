@@ -8,6 +8,10 @@ from app.domain.entities.vote import Vote
 
 class PollRepository(ABC):
 
+    def list_polls(self, state: str, poll_type: str | None, offset: int, limit: int):
+        """Consulta un catálogo paginado sin incluir votos ni credenciales."""
+        raise NotImplementedError
+
     @abstractmethod
     def get_by_id(self, poll_id: UUID) -> Poll | None:
         """Obtiene una votación por su identificador o devuelve None si no existe."""

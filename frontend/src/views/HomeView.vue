@@ -1,11 +1,12 @@
 <script setup lang="ts">
+import PollCatalog from '../components/PollCatalog.vue'
 </script>
 
 <template>
   <main id="main-content" class="home" tabindex="-1">
     <header class="header">
       <a class="logo" href="/">VoteStupid<span>!</span></a>
-      <RouterLink class="history-nav" to="/historial">Histórico</RouterLink>
+      <a class="history-nav" href="#votaciones">Explorar votaciones</a>
 
       <span class="tagline">Las decisiones importantes...</span>
     </header>
@@ -20,17 +21,19 @@
       </h1>
 
       <p class="description">
-        Crea votaciones, comparte el enlace y deja que tus amigos
-        decidan. Sin registros y sin complicaciones.
+        Las preguntas están sobre la mesa. Elige una votación,
+        comparte tu opinión y descubre qué decide el grupo.
       </p>
 
-      <RouterLink class="create-button" to="/crear">
-        Crear una votación
+      <a class="create-button" href="#votaciones">
+        Encuentra tu próxima decisión
         <span aria-hidden="true">→</span>
-      </RouterLink>
+      </a>
 
       <p class="note">Gratis · Anónimo · Sin necesidad de registrarse</p>
     </section>
+
+    <PollCatalog />
 
     <footer class="footer">
       VoteStupid! © 2026

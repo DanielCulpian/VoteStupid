@@ -11,7 +11,7 @@ from starlette.responses import JSONResponse
 
 
 MAX_BODY_BYTES = 64 * 1024
-RATE_POLICIES = {"all": 300, "create": 10, "vote": 30, "admin": 30, "ws": 30}
+RATE_POLICIES = {"all": 300, "create": 10, "vote": 30, "admin": 30, "ws": 30, "login": 5, "login_total": 20}
 
 
 def allowed_origins() -> list[str]:
@@ -99,6 +99,8 @@ class ApiProtection:
         category = "all"
         if kind == "websocket":
             category = "ws"
+        elif path == "/api/admin/auth/login":
+            category = "login"
         elif path.startswith("/api/admin/"):
             category = "admin"
         elif path.rstrip("/") == "/api/polls" and scope["method"] == "POST":

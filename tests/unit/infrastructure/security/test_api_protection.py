@@ -5,8 +5,17 @@ import pytest
 from fastapi.testclient import TestClient
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
-from app.main import create_app
+from app.main import create_app as protected_app
+from app.infrastructure.security.admin_session import require_admin_session
 from app.infrastructure.security.api_protection import ApiProtection, RateLimiter, SafeAccessLog, allowed_origins
+
+
+
+def create_app():
+    """Prueba validacion y limites de un organizador autorizado, sin omitir esas protecciones."""
+    app = protected_app()
+    app.dependency_overrides[require_admin_session] = lambda: None
+    return app
 
 
 def test_limiter_window_and_bounded_storage():

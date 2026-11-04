@@ -15,6 +15,8 @@ from app.presentation.api.dependencies import get_poll_repository
 def independent_client(engine, repository_class=SqlAlchemyPollRepository):
     """Crea una API con una sesión propia por petición para probar clientes concurrentes."""
     app = create_app()
+    from app.infrastructure.security.admin_session import require_admin_session
+    app.dependency_overrides[require_admin_session] = lambda: None
 
     def repository():
         """Proporciona una transacción independiente y libera la sesión al finalizar."""
