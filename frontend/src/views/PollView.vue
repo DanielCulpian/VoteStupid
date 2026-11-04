@@ -7,9 +7,10 @@ import {
   type PollResults,
 } from '../services/resultsService'
 import type { PollResponse } from '../types/poll'
-import { onMounted, onUnmounted, ref } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { connectToPoll, type RealtimeConnectionState } from '../services/websocketService'
 import RealtimeNotice from '../components/RealtimeNotice.vue'
+import LiveAnnouncer from '../components/LiveAnnouncer.vue'
 
 const route = useRoute()
 
@@ -26,6 +27,8 @@ const successMessage = ref('')
 const storageWarning = ref('')
 const connectionState = ref<RealtimeConnectionState>('connecting')
 const isReconnecting = ref(false)
+const rankingAnnouncement = ref('')
+const statusAnnouncement = ref('')
 
 const selectedOptionIds = ref<string[]>([])
 const rankingOptionIds = ref<string[]>([])
@@ -87,6 +90,9 @@ function connectLive() {
         if (version === connectionVersion && !isDisposed && poll.value) {
           poll.value.is_active = isActive
           successMessage.value = ''
+          statusAnnouncement.value = isActive
+            ? 'La votación se ha reabierto. Puedes votar.'
+            : 'La votación se ha cerrado. Ya no se pueden modificar los votos.'
         }
       },
       // Mantiene visible el estado de conexión de la suscripción actual.
@@ -208,8 +214,13 @@ function toggleOption(optionId: string) {
   selectedOptionIds.value = [...selected, optionId]
 }
 
-// Reordena una opción del ranking solo si la votación está abierta.
-function moveRanking(index: number, direction: number) {
+// Obtiene el texto de una opción del ranking para sus etiquetas y anuncios accesibles.
+function rankingOptionText(optionId: string): string {
+  return poll.value?.options.find(option => option.id === optionId)?.text ?? 'Opción'
+}
+
+// Reordena el ranking, anuncia la nueva posición y mantiene el foco en la opción movida.
+async function moveRanking(index: number, direction: number) {
   if (!poll.value?.is_active || isSubmitting.value) return
 
   const newIndex = index + direction
@@ -225,6 +236,7 @@ function moveRanking(index: number, direction: number) {
   errorMessage.value = ''
 
   const updated = [...rankingOptionIds.value]
+  const movedOptionId = updated[index]!
 
   ;[updated[index], updated[newIndex]] = [
     updated[newIndex],
@@ -232,11 +244,21 @@ function moveRanking(index: number, direction: number) {
   ]
 
   rankingOptionIds.value = updated
+  rankingAnnouncement.value = `${rankingOptionText(movedOptionId)}. Posición ${newIndex + 1} de ${updated.length}.`
+  await nextTick()
+  if (isDisposed) return
+  const action = direction < 0 ? 'up' : 'down'
+  const alternateAction = direction < 0 ? 'down' : 'up'
+  const preferred = document.getElementById(`ranking-${movedOptionId}-${action}`) as HTMLButtonElement | null
+  const alternate = document.getElementById(`ranking-${movedOptionId}-${alternateAction}`) as HTMLButtonElement | null
+  if (preferred && !preferred.disabled) preferred.focus()
+  else alternate?.focus()
 }
 
 // Registra o actualiza el voto si la votación está abierta y no hay otro envío.
 async function submitVote() {
   if (!poll.value || !poll.value.is_active || isSubmitting.value) return
+  const restoreFocus = document.activeElement?.id === 'submit-vote'
 
   errorMessage.value = ''
   successMessage.value = ''
@@ -277,6 +299,10 @@ async function submitVote() {
         : 'No se ha podido guardar tu voto.'
   } finally {
     isSubmitting.value = false
+    await nextTick()
+    if (restoreFocus && (document.activeElement === document.body || document.activeElement?.id === 'submit-vote')) {
+      document.getElementById(poll.value?.is_active ? 'submit-vote' : 'poll-closed')?.focus()
+    }
   }
 }
 // Cierra el WebSocket al abandonar la vista para liberar la conexión.
@@ -288,7 +314,9 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="home">
+  <main id="main-content" class="home" tabindex="-1">
+    <LiveAnnouncer :message="isSubmitting ? 'Guardando tu voto.' : successMessage || rankingAnnouncement" />
+    <LiveAnnouncer :message="statusAnnouncement" />
     <header class="header">
       <RouterLink class="logo" to="/">
         VoteStupid<span>!</span>
@@ -297,6 +325,7 @@ onUnmounted(() => {
 
     <section class="form-container">
       <p class="eyebrow">VOTACIÓN</p>
+      <h1 v-if="!poll">Votación</h1>
 
       <div v-if="isLoading" class="loading-message" role="status" aria-busy="true">
         Cargando votación...
@@ -312,7 +341,7 @@ onUnmounted(() => {
       </div>
 
       <div v-else-if="poll">
-        <h1>{{ poll.title }}</h1>
+        <h1 id="page-title" tabindex="-1">{{ poll.title }}</h1>
 
         <RealtimeNotice
           :state="connectionState"
@@ -325,7 +354,7 @@ onUnmounted(() => {
           {{ poll.description }}
         </p>
 
-        <p class="field-hint">
+        <p id="vote-instructions" class="field-hint">
           <span v-if="poll.poll_type === 'single_choice'">
             Elige una opción.
           </span>
@@ -343,6 +372,8 @@ onUnmounted(() => {
         <div
           v-if="poll.poll_type !== 'ranking'"
           class="poll-options"
+          role="group"
+          aria-labelledby="vote-instructions"
         >
           <button
             v-for="option in poll.options"
@@ -353,33 +384,35 @@ onUnmounted(() => {
               selected: selectedOptionIds.includes(option.id),
             }"
             :disabled="!poll.is_active || isSubmitting"
+            :aria-pressed="selectedOptionIds.includes(option.id)"
             @click="toggleOption(option.id)"
           >
             <span>{{ option.text }}</span>
 
-            <span>
+            <span aria-hidden="true">
               {{ selectedOptionIds.includes(option.id) ? '✓' : '' }}
             </span>
           </button>
         </div>
 
         <!-- RANKING -->
-        <div v-else class="poll-options">
-          <div
+        <ol v-else class="poll-options ranking-list" role="list" aria-label="Orden de preferencia" aria-describedby="vote-instructions">
+          <li
             v-for="(optionId, index) in rankingOptionIds"
             :key="optionId"
             class="ranking-option"
           >
-            <span>{{ index + 1 }}.</span>
+            <span aria-hidden="true">{{ index + 1 }}.</span>
 
             <span class="ranking-text">
-              {{ poll.options.find(option => option.id === optionId)?.text }}
+              {{ rankingOptionText(optionId) }}
             </span>
 
             <button
               type="button"
+              :id="`ranking-${optionId}-up`"
               :disabled="!poll.is_active || isSubmitting || index === 0"
-              aria-label="Subir opción"
+              :aria-label="`Subir ${rankingOptionText(optionId)}`"
               @click="moveRanking(index, -1)"
             >
               ↑
@@ -387,14 +420,15 @@ onUnmounted(() => {
 
             <button
               type="button"
+              :id="`ranking-${optionId}-down`"
               :disabled="!poll.is_active || isSubmitting || index === rankingOptionIds.length - 1"
-              aria-label="Bajar opción"
+              :aria-label="`Bajar ${rankingOptionText(optionId)}`"
               @click="moveRanking(index, 1)"
             >
               ↓
             </button>
-          </div>
-        </div>
+          </li>
+        </ol>
 
         <!-- MENSAJES -->
         <p
@@ -408,15 +442,15 @@ onUnmounted(() => {
         <p
           v-if="successMessage"
           class="success-message"
-          role="status"
         >
           {{ successMessage }}
         </p>
 
         <!-- BOTÓN DE VOTACIÓN -->
-        <p v-if="isSubmitting" class="loading-message" role="status">Guardando tu voto...</p>
+        <p v-if="isSubmitting" class="loading-message">Guardando tu voto...</p>
         <button
           v-if="poll.is_active"
+          id="submit-vote"
           type="button"
           class="create-button"
           :disabled="isSubmitting"
@@ -431,10 +465,10 @@ onUnmounted(() => {
                 : 'Enviar mi voto'
           }}
 
-          <span v-if="!isSubmitting">→</span>
+          <span v-if="!isSubmitting" aria-hidden="true">→</span>
         </button>
 
-        <p v-if="!poll.is_active" class="warning-message" role="status">
+        <p v-if="!poll.is_active" id="poll-closed" class="warning-message" tabindex="-1">
           Esta votación está cerrada.
         </p>
 
@@ -443,7 +477,7 @@ onUnmounted(() => {
           <div class="results-header">
             <h2>Resultados</h2>
 
-            <span v-if="results">
+            <span v-if="results" aria-live="polite" aria-atomic="true">
               {{ results.total_votes }} votos
             </span>
           </div>
@@ -476,7 +510,7 @@ onUnmounted(() => {
                 </span>
               </div>
 
-              <div class="result-bar">
+              <div class="result-bar" aria-hidden="true">
                 <div
                   class="result-bar-fill"
                   :style="{

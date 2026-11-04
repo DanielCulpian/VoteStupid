@@ -1,6 +1,6 @@
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import type { PollResponse } from '../types/poll'
 import type { PollResults } from '../services/resultsService'
@@ -8,6 +8,7 @@ import { getAdminPoll, closePoll, reopenPoll } from '../services/adminService'
 import { getPollResults } from '../services/resultsService'
 import { connectToPoll, type RealtimeConnectionState } from '../services/websocketService'
 import RealtimeNotice from '../components/RealtimeNotice.vue'
+import LiveAnnouncer from '../components/LiveAnnouncer.vue'
 
 const route = useRoute()
 const pollId = String(route.params.id)
@@ -124,6 +125,7 @@ async function loadAdminPanel() {
 // Cierra o reabre la votación y actualiza los datos del panel de administración.
 async function updatePollStatus() {
   if (!poll.value || !adminToken.value || isUpdating.value || isLoading.value) return
+  const restoreFocus = document.activeElement?.id === 'admin-status'
 
   isUpdating.value = true
   errorMessage.value = ''
@@ -146,6 +148,10 @@ async function updatePollStatus() {
         : 'No se pudo actualizar la votación.'
   } finally {
     isUpdating.value = false
+    await nextTick()
+    if (restoreFocus && (document.activeElement === document.body || document.activeElement?.id === 'admin-status')) {
+      document.getElementById('admin-status')?.focus()
+    }
   }
 }
 
@@ -175,12 +181,13 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="admin-page">
+  <main id="main-content" class="admin-page" tabindex="-1">
+    <LiveAnnouncer :message="isUpdating ? 'Guardando el estado de la votación.' : successMessage" />
     <nav class="header" aria-label="Navegación principal">
       <RouterLink class="logo" to="/">VoteStupid<span>!</span></RouterLink>
     </nav>
     <header>
-      <h1>Panel de administración</h1>
+      <h1 id="page-title" tabindex="-1">Panel de administración</h1>
       <p>Gestiona tu votación desde aquí.</p>
     </header>
 
@@ -207,6 +214,7 @@ onUnmounted(() => {
 
         <div class="admin-actions">
           <button
+            id="admin-status"
             type="button"
             :disabled="isUpdating"
             :aria-busy="isUpdating"
@@ -227,8 +235,8 @@ onUnmounted(() => {
         </div>
       </section>
 
-      <p v-if="isUpdating" class="loading-message" role="status">Guardando el estado de la votación...</p>
-      <p v-if="successMessage" class="success-message" role="status">
+      <p v-if="isUpdating" class="loading-message">Guardando el estado de la votación...</p>
+      <p v-if="successMessage" class="success-message">
         {{ successMessage }}
       </p>
 
@@ -241,7 +249,7 @@ onUnmounted(() => {
           <button type="button" class="retry-button" @click="loadResults">Volver a cargar resultados</button>
         </div>
         <template v-if="results">
-          <p>Participantes: {{ results.total_votes }}</p>
+          <p aria-live="polite" aria-atomic="true">Participantes: {{ results.total_votes }}</p>
 
           <div
             v-for="result in results.results"
@@ -252,7 +260,7 @@ onUnmounted(() => {
               <strong>{{ result.option_text }}</strong>
               <span>{{ result.votes }} votos</span>
             </div>
-            <div class="result-bar">
+            <div class="result-bar" aria-hidden="true">
               <div
                 class="result-bar-fill"
                 :style="{ width: `${result.percentage}%` }"

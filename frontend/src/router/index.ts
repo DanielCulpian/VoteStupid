@@ -11,26 +11,31 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
+      meta: { title: 'Inicio' },
       component: HomeView,
     },
     {
       path: '/crear',
       name: 'create-poll',
+      meta: { title: 'Crear una votación' },
       component: CreatePollView,
     },
     {
         path: '/votacion/:id',
         name: 'poll',
+        meta: { title: 'Votación' },
         component: PollView,
     },
     {
       path: '/admin/:id',
       name: 'admin',
+      meta: { title: 'Administración' },
       component: AdminView,
     },
     {
       path: '/:pathMatch(.*)*',
       name: 'not-found',
+      meta: { title: 'Página no encontrada' },
       component: NotFoundView,
     },
   ],

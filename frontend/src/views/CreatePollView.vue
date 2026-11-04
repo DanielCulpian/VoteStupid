@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { nextTick, ref } from 'vue'
+import LiveAnnouncer from '../components/LiveAnnouncer.vue'
 import { createPoll } from '../services/pollService'
 import type {
   PollType,
@@ -17,23 +18,40 @@ const adminUrl = ref('')
 const isSubmitting = ref(false)
 const errorMessage = ref('')
 const createdPoll = ref<PollCreatedResponse | null>(null)
+const invalidField = ref('')
+const formAnnouncement = ref('')
+
+// Anuncia el error de validación y lleva el foco al campo que necesita corrección.
+async function showValidationError(message: string, fieldId: string) {
+  errorMessage.value = message
+  invalidField.value = fieldId
+  await nextTick()
+  document.getElementById(fieldId)?.focus()
+}
 
 // Añade una opción vacía al formulario de creación de votaciones.
-function addOption() {
+async function addOption() {
   if (isSubmitting.value) return
   options.value.push('')
+  formAnnouncement.value = `Opción ${options.value.length} añadida.`
+  await nextTick()
+  document.getElementById(`option-${options.value.length - 1}`)?.focus()
 }
 
 // Elimina una opción del formulario conservando al menos dos opciones.
-function removeOption(index: number) {
+async function removeOption(index: number) {
   if (isSubmitting.value || options.value.length <= 2) return
   options.value.splice(index, 1)
+  formAnnouncement.value = `Opción ${index + 1} eliminada. Quedan ${options.value.length} opciones.`
+  await nextTick()
+  document.getElementById(`option-${Math.min(index, options.value.length - 1)}`)?.focus()
 }
 
 // Valida el formulario, crea la votación y prepara sus enlaces público y de administración.
 async function submitPoll() {
   if (isSubmitting.value) return
   errorMessage.value = ''
+  invalidField.value = ''
   createdPoll.value = null
 
   const cleanedOptions = options.value.map(option => option.trim())
@@ -42,12 +60,12 @@ async function submitPoll() {
     : Number(maxSelections.value)
 
   if (!title.value.trim()) {
-    errorMessage.value = 'El título no puede estar vacío.'
+    await showValidationError('El título no puede estar vacío.', 'title')
     return
   }
 
   if (cleanedOptions.some(option => !option)) {
-    errorMessage.value = 'Todas las opciones deben tener texto.'
+    await showValidationError('Todas las opciones deben tener texto.', `option-${cleanedOptions.findIndex(option => !option)}`)
     return
   }
 
@@ -60,8 +78,7 @@ async function submitPoll() {
       selectionLimit > cleanedOptions.length
     )
   ) {
-    errorMessage.value =
-      'El máximo de selecciones debe estar entre 1 y el número de opciones.'
+    await showValidationError('El máximo de selecciones debe estar entre 1 y el número de opciones.', 'max-selections')
     return
   }
 
@@ -88,6 +105,8 @@ async function submitPoll() {
 
     adminUrl.value =
       `${window.location.origin}/admin/${poll.id}#token=${encodeURIComponent(poll.admin_token)}`
+    await nextTick()
+    document.getElementById('creation-success')?.focus()
   } catch (error) {
     errorMessage.value =
       error instanceof Error
@@ -100,7 +119,8 @@ async function submitPoll() {
 </script>
 
 <template>
-  <main class="home">
+  <main id="main-content" class="home" tabindex="-1">
+    <LiveAnnouncer :message="isSubmitting ? 'Creando tu votación.' : createdPoll ? 'Votación creada correctamente. Guarda el enlace privado de administración.' : formAnnouncement" />
     <header class="header">
       <RouterLink class="logo" to="/">
         VoteStupid<span>!</span>
@@ -111,15 +131,16 @@ async function submitPoll() {
       <p class="eyebrow">NUEVA VOTACIÓN</p>
       <h1>Vamos a <span>decidir.</span></h1>
 
-      <div v-if="createdPoll" class="success-message" role="status">
-        <h2>¡Votación creada!</h2>
+      <div v-if="createdPoll" class="success-message">
+        <h2 id="creation-success" tabindex="-1">¡Votación creada!</h2>
         <p>Tu votación se ha guardado correctamente.</p>
 
         <div class="created-link">
           <h3>Enlace para los participantes</h3>
-          <a :href="publicUrl" target="_blank">
+          <a :href="publicUrl" target="_blank" rel="noopener" aria-describedby="public-link-hint">
             {{ publicUrl }}
           </a>
+          <p id="public-link-hint" class="field-hint">Se abre en una pestaña nueva.</p>
         </div>
 
         <div class="created-link">
@@ -140,9 +161,12 @@ async function submitPoll() {
         :aria-busy="isSubmitting"
         @submit.prevent="submitPoll"
       >
+        <p class="field-hint">El título y las opciones de respuesta son obligatorios.</p>
         <label for="title">Título de la votación</label>
         <input
           id="title"
+          :aria-invalid="invalidField === 'title'"
+          :aria-describedby="invalidField === 'title' ? 'creation-error' : undefined"
           :disabled="isSubmitting"
           v-model="title"
           type="text"
@@ -172,6 +196,8 @@ async function submitPoll() {
           </label>
           <input
             id="max-selections"
+            :aria-invalid="invalidField === 'max-selections'"
+            :aria-describedby="invalidField === 'max-selections' ? 'max-selections-hint creation-error' : 'max-selections-hint'"
             :disabled="isSubmitting"
             v-model.number="maxSelections"
             type="number"
@@ -179,13 +205,13 @@ async function submitPoll() {
             :max="options.length"
             placeholder="Sin límite adicional"
           />
-          <p class="field-hint">
+          <p id="max-selections-hint" class="field-hint">
             Si lo dejas vacío, no habrá un límite adicional.
           </p>
         </div>
 
         <div class="options-header">
-          <label>Opciones de respuesta</label>
+          <h2 class="options-heading">Opciones de respuesta</h2>
           <span>{{ options.length }} opciones</span>
         </div>
 
@@ -196,6 +222,9 @@ async function submitPoll() {
         >
           <input
             v-model="options[index]"
+            :id="`option-${index}`"
+            :aria-invalid="invalidField === `option-${index}`"
+            :aria-describedby="invalidField === `option-${index}` ? 'creation-error' : undefined"
             :disabled="isSubmitting"
             :aria-label="`Opción ${index + 1}`"
             type="text"
@@ -231,11 +260,11 @@ async function submitPoll() {
           type="datetime-local"
         />
 
-        <p v-if="errorMessage" class="error-message" role="alert">
+        <p v-if="errorMessage" id="creation-error" class="error-message" role="alert" aria-atomic="true">
           {{ errorMessage }}
         </p>
 
-        <p v-if="isSubmitting" class="loading-message" role="status">Creando tu votación. Espera un momento...</p>
+        <p v-if="isSubmitting" class="loading-message">Creando tu votación. Espera un momento...</p>
 
         <button
           class="create-button"
@@ -243,7 +272,7 @@ async function submitPoll() {
           :disabled="isSubmitting"
         >
           {{ isSubmitting ? 'Creando...' : 'Crear votación' }}
-          <span v-if="!isSubmitting">→</span>
+          <span v-if="!isSubmitting" aria-hidden="true">→</span>
         </button>
       </form>
     </section>

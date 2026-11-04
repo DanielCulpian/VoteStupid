@@ -1,5 +1,5 @@
 <template>
-  <main class="home">
+  <main id="main-content" class="home" tabindex="-1">
     <header class="header">
       <RouterLink class="logo" to="/">VoteStupid<span>!</span></RouterLink>
     </header>

@@ -6,7 +6,7 @@ const { parse, compileScript } = require('@vue/compiler-sfc')
 const vue = require('vue')
 
 // Ejecuta la lógica real de una vista con servicios controlados, sin montar una interfaz ficticia.
-function loadView(filename, services = {}) {
+function loadView(filename, services = {}, globals = {}) {
   const source = fs.readFileSync(path.join(__dirname, '../../src/views', filename), 'utf8')
   const { descriptor } = parse(source)
   const compiled = compileScript(descriptor, { id: filename })
@@ -53,6 +53,13 @@ function loadView(filename, services = {}) {
     },
     URLSearchParams,
     Error,
+    document: {
+      body: {},
+      activeElement: null,
+      // Permite probar la lógica sin elementos reales; las pruebas de foco pueden sustituirlo.
+      getElementById: () => null,
+    },
+    ...globals,
   }, { filename })
   // Recoge las referencias y acciones expuestas por script setup para comprobar su comportamiento.
   return exports.default.setup({}, { expose() {} })

@@ -2,7 +2,7 @@
 </script>
 
 <template>
-  <main class="home">
+  <main id="main-content" class="home" tabindex="-1">
     <header class="header">
       <a class="logo" href="/">VoteStupid<span>!</span></a>
 
@@ -25,7 +25,7 @@
 
       <RouterLink class="create-button" to="/crear">
         Crear una votación
-        <span>→</span>
+        <span aria-hidden="true">→</span>
       </RouterLink>
 
       <p class="note">Gratis · Anónimo · Sin necesidad de registrarse</p>

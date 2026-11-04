@@ -2,6 +2,7 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 :root {
+  --accent: #b63824;
   font-family: 'DM Sans', sans-serif;
   color: #202020;
   background: #faf8f3;
@@ -32,9 +33,13 @@ button {
 }
 
 button:focus-visible,
-a:focus-visible {
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
   outline: 3px solid #202020;
-  outline-offset: 4px;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 2px white;
 }
 
 .home {
@@ -64,11 +69,11 @@ a:focus-visible {
 }
 
 .logo span {
-  color: #f15b42;
+  color: var(--accent);
 }
 
 .tagline {
-  color: #777;
+  color: #626262;
   font-size: 13px;
 }
 
@@ -80,7 +85,7 @@ a:focus-visible {
 }
 
 .eyebrow {
-  color: #f15b42;
+  color: var(--accent);
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 2px;
@@ -95,7 +100,7 @@ h1 {
 }
 
 h1 span {
-  color: #f15b42;
+  color: var(--accent);
 }
 
 .description {
@@ -113,7 +118,7 @@ h1 span {
   padding: 18px 25px;
   border: none;
   border-radius: 9px;
-  background: #f15b42;
+  background: var(--accent);
   color: white;
   font-size: 15px;
   font-weight: 700;
@@ -126,7 +131,7 @@ h1 span {
 }
 
 .create-button:hover {
-  background: #d94832;
+  background: #952b1c;
   transform: translateY(-2px);
 }
 
@@ -136,14 +141,14 @@ h1 span {
 
 .note {
   margin-top: 20px;
-  color: #888;
+  color: #626262;
   font-size: 12px;
 }
 
 .footer {
   padding-top: 25px;
   border-top: 1px solid #e8e5de;
-  color: #999;
+  color: #626262;
   font-size: 12px;
 }
 
@@ -197,12 +202,11 @@ h1 span {
 .poll-form select {
   width: 100%;
   padding: 15px;
-  border: 1px solid #e3dfd7;
+  border: 1px solid #827d73;
   border-radius: 8px;
   background: white;
   color: #202020;
   font: inherit;
-  outline: none;
   min-width: 0;
   min-height: 48px;
   font-size: 16px;
@@ -211,7 +215,7 @@ h1 span {
 .poll-form input:focus,
 .poll-form textarea:focus,
 .poll-form select:focus {
-  border-color: #f15b42;
+  border-color: var(--accent);
 }
 
 .options-header {
@@ -223,7 +227,7 @@ h1 span {
 }
 
 .options-header span {
-  color: #888;
+  color: #626262;
   font-size: 12px;
 }
 
@@ -240,7 +244,7 @@ h1 span {
 .remove-button {
   width: 48px;
   flex-shrink: 0;
-  border: 1px solid #e3dfd7;
+  border: 1px solid #827d73;
   border-radius: 8px;
   background: white;
   font-size: 24px;
@@ -257,7 +261,7 @@ h1 span {
   padding: 10px 0;
   border: none;
   background: transparent;
-  color: #f15b42;
+  color: var(--accent);
   font-weight: 700;
   cursor: pointer;
 }
@@ -302,7 +306,7 @@ h1 span {
 
 .field-hint {
   margin: 0;
-  color: #888;
+  color: #626262;
   font-size: 12px;
 }
 
@@ -322,7 +326,7 @@ h1 span {
   width: 20px;
   height: 20px;
   border: 3px solid #e8e5de;
-  border-top-color: #f15b42;
+  border-top-color: var(--accent);
   border-radius: 50%;
   animation: loading-spin 0.8s linear infinite;
 }
@@ -383,7 +387,7 @@ h1 span {
 
 .poll-option {
   padding: 18px;
-  border: 1px solid #ddd;
+  border: 1px solid #827d73;
   border-radius: 10px;
   background: white;
   font-weight: 600;
@@ -428,7 +432,7 @@ h1 span {
   align-items: center;
   gap: 12px;
   padding: 14px;
-  border: 1px solid #ddd;
+  border: 1px solid #827d73;
   border-radius: 10px;
   background: white;
 }
@@ -441,7 +445,7 @@ h1 span {
 .ranking-option button {
   width: 48px;
   height: 48px;
-  border: 1px solid #ddd;
+  border: 1px solid #827d73;
   border-radius: 7px;
   background: white;
   cursor: pointer;
@@ -483,14 +487,14 @@ h1 span {
 .admin-card {
   margin: 24px 0;
   padding: 24px;
-  border: 1px solid #ddd;
+  border: 1px solid #827d73;
   border-radius: 12px;
   background: white;
 }
 
 .admin-actions button {
   padding: 12px 16px;
-  border: 1px solid #e3dfd7;
+  border: 1px solid #827d73;
   border-radius: 8px;
   background: #faf8f3;
   color: #202020;
@@ -548,7 +552,7 @@ h1 span {
   height: 100%;
   max-width: 100%;
   border-radius: inherit;
-  background: #f15b42;
+  background: var(--accent);
   transition: width 0.2s;
 }
 
@@ -629,4 +633,66 @@ h1 span {
 
 .error-message {
   color: #b42318;
+}
+
+/* Conserva los anuncios en el árbol accesible sin mostrarlos visualmente. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 1000;
+  padding: 14px 18px;
+  border-radius: 8px;
+  background: #202020;
+  color: white;
+  transform: translateY(-200%);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+:focus {
+  scroll-margin-block: 24px;
+}
+
+.poll-form input::placeholder,
+.poll-form textarea::placeholder {
+  color: #626262;
+  opacity: 1;
+}
+
+.options-heading {
+  margin: 16px 0 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.ranking-list {
+  padding: 0;
+  list-style: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .create-button,
+  .poll-option,
+  .result-bar-fill {
+    transition: none;
+  }
+
+  .create-button:hover {
+    transform: none;
+  }
 }
