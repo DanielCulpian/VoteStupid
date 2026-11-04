@@ -2,15 +2,39 @@ const API_URL = import.meta.env.VITE_API_URL
 
 const WS_URL = API_URL.replace(/^http/, 'ws')
 
+export type RealtimeConnectionState = 'connecting' | 'connected' | 'disconnected'
+
 // Abre un WebSocket y notifica las actualizaciones de resultados y estado de la votación.
 export function connectToPoll(
   pollId: string,
   onResultsUpdated: (results: unknown) => void,
   onPollStatusUpdated?: (isActive: boolean) => void,
+  onConnectionStateChanged?: (state: RealtimeConnectionState) => void,
 ): WebSocket {
+  onConnectionStateChanged?.('connecting')
   const socket = new WebSocket(
     `${WS_URL}/api/polls/${pollId}/ws`,
   )
+
+  // Evita dejar el aviso de conexión pendiente indefinidamente si no responde.
+  const connectionTimeout = setTimeout(() => {
+    if (socket.readyState === WebSocket.CONNECTING) {
+      onConnectionStateChanged?.('disconnected')
+      socket.close()
+    }
+  }, 12000)
+
+  // Confirma que ya pueden recibirse los cambios en directo.
+  socket.addEventListener('open', () => {
+    clearTimeout(connectionTimeout)
+    onConnectionStateChanged?.('connected')
+  })
+
+  // Informa de la desconexión para mostrar el aviso y permitir un reintento manual.
+  socket.addEventListener('close', () => {
+    clearTimeout(connectionTimeout)
+    onConnectionStateChanged?.('disconnected')
+  })
 
   // Valida cada mensaje recibido y lo entrega al callback de resultados o de estado.
   socket.addEventListener('message', event => {
@@ -43,6 +67,8 @@ export function connectToPoll(
 
   // Registra los fallos de conexión WebSocket para facilitar su diagnóstico.
   socket.addEventListener('error', error => {
+    clearTimeout(connectionTimeout)
+    onConnectionStateChanged?.('disconnected')
     console.error('Error en la conexión WebSocket:', error)
   })
 

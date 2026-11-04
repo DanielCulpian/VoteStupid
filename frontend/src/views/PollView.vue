@@ -8,35 +8,45 @@ import {
 } from '../services/resultsService'
 import type { PollResponse } from '../types/poll'
 import { onMounted, onUnmounted, ref } from 'vue'
-import { connectToPoll } from '../services/websocketService'
+import { connectToPoll, type RealtimeConnectionState } from '../services/websocketService'
+import RealtimeNotice from '../components/RealtimeNotice.vue'
 
 const route = useRoute()
 
 const poll = ref<PollResponse | null>(null)
 const results = ref<PollResults | null>(null)
 
-const isLoading = ref(true)
+const isLoading = ref(false)
 const isLoadingResults = ref(false)
 const isSubmitting = ref(false)
 
 const errorMessage = ref('')
 const resultsError = ref('')
 const successMessage = ref('')
+const storageWarning = ref('')
+const connectionState = ref<RealtimeConnectionState>('connecting')
+const isReconnecting = ref(false)
 
 const selectedOptionIds = ref<string[]>([])
 const rankingOptionIds = ref<string[]>([])
 const hasVoted = ref(false)
 
 let socket: WebSocket | null = null
+let connectionVersion = 0
+let isDisposed = false
 
 // Guarda las opciones del voto en el navegador para recuperarlas al volver a la votación.
 function saveVoteLocally(optionIds: string[]) {
   if (!poll.value) return
 
-  localStorage.setItem(
-    `votestupid:vote:${poll.value.id}`,
-    JSON.stringify(optionIds),
-  )
+  try {
+    localStorage.setItem(
+      `votestupid:vote:${poll.value.id}`,
+      JSON.stringify(optionIds),
+    )
+  } catch {
+    storageWarning.value = 'Tu voto se ha guardado, pero este navegador no permite recordarlo para tu próxima visita.'
+  }
 }
 
 // Carga los resultados de la votación y actualiza los indicadores de carga y error.
@@ -58,34 +68,73 @@ async function loadResults() {
   }
 }
 
-// Carga la votación, recupera el voto local y suscribe los cambios en directo al montar la vista.
-onMounted(async () => {
+// Suscribe el estado y los resultados sin dejar que una conexión anterior cambie el aviso actual.
+function connectLive() {
+  if (!poll.value || isDisposed) return
+  const version = ++connectionVersion
+  socket?.close()
+  try {
+    socket = connectToPoll(
+      poll.value.id,
+      // Refleja los resultados recibidos y elimina errores de consultas anteriores.
+      updatedResults => {
+        if (version !== connectionVersion || isDisposed) return
+        results.value = updatedResults as PollResults
+        resultsError.value = ''
+      },
+      // Habilita o bloquea los controles cuando cambia el estado de la votación.
+      isActive => {
+        if (version === connectionVersion && !isDisposed && poll.value) {
+          poll.value.is_active = isActive
+          successMessage.value = ''
+        }
+      },
+      // Mantiene visible el estado de conexión de la suscripción actual.
+      state => {
+        if (version === connectionVersion && !isDisposed) connectionState.value = state
+      },
+    )
+  } catch {
+    connectionState.value = 'disconnected'
+  }
+}
+
+// Reconecta el directo y recupera el estado y los resultados que pudieron cambiar durante el corte.
+async function reconnectLive() {
+  if (!poll.value || isReconnecting.value || isSubmitting.value) return
+  isReconnecting.value = true
+  errorMessage.value = ''
+  connectLive()
+  try {
+    poll.value = await getPoll(poll.value.id)
+    await loadResults()
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'No se ha podido recuperar la votación.'
+  } finally {
+    isReconnecting.value = false
+  }
+}
+
+// Carga la votación, recupera el voto local y permite reintentar si falla el enlace o el servidor.
+async function loadPoll() {
+  if (isLoading.value) return
+  isLoading.value = true
+  errorMessage.value = ''
   try {
     poll.value = await getPoll(String(route.params.id))
-
-    if (poll.value) {
-      socket = connectToPoll(
-        poll.value.id,
-        // Refleja los resultados recibidos sin recargar la vista.
-        updatedResults => {
-          results.value = updatedResults as PollResults
-        },
-        // Aplica el estado recibido para bloquear o habilitar los controles.
-        isActive => {
-          if (poll.value) {
-            poll.value.is_active = isActive
-          }
-        },
-      )
-    }
+    if (isDisposed) return
+    connectLive()
 
     rankingOptionIds.value = poll.value.options.map(
       option => option.id,
     )
 
-    const savedVote = localStorage.getItem(
-      `votestupid:vote:${poll.value.id}`,
-    )
+    let savedVote: string | null = null
+    try {
+      savedVote = localStorage.getItem(`votestupid:vote:${poll.value.id}`)
+    } catch {
+      storageWarning.value = 'Este navegador no permite recuperar tu voto anterior. Si ya has votado, utiliza el mismo navegador y permite el almacenamiento local.'
+    }
 
     if (savedVote) {
       try {
@@ -109,9 +158,7 @@ onMounted(async () => {
           }
         }
       } catch {
-        localStorage.removeItem(
-          `votestupid:vote:${poll.value.id}`,
-        )
+        storageWarning.value = 'No se ha podido recuperar el voto guardado en este navegador.'
       }
     }
 
@@ -124,11 +171,13 @@ onMounted(async () => {
   } finally {
     isLoading.value = false
   }
-})
+}
+
+onMounted(loadPoll)
 
 // Cambia la selección de opciones solo si la votación está abierta.
 function toggleOption(optionId: string) {
-  if (!poll.value || !poll.value.is_active) return
+  if (!poll.value || !poll.value.is_active || isSubmitting.value) return
 
   successMessage.value = ''
   errorMessage.value = ''
@@ -161,7 +210,7 @@ function toggleOption(optionId: string) {
 
 // Reordena una opción del ranking solo si la votación está abierta.
 function moveRanking(index: number, direction: number) {
-  if (!poll.value?.is_active) return
+  if (!poll.value?.is_active || isSubmitting.value) return
 
   const newIndex = index + direction
 
@@ -192,10 +241,11 @@ async function submitVote() {
   errorMessage.value = ''
   successMessage.value = ''
 
-  const optionIds =
+  const optionIds = [...(
     poll.value.poll_type === 'ranking'
       ? rankingOptionIds.value
       : selectedOptionIds.value
+  )]
 
   if (optionIds.length === 0) {
     errorMessage.value = 'Selecciona al menos una opción.'
@@ -231,6 +281,8 @@ async function submitVote() {
 }
 // Cierra el WebSocket al abandonar la vista para liberar la conexión.
 onUnmounted(() => {
+  isDisposed = true
+  connectionVersion++
   socket?.close()
 })
 </script>
@@ -246,19 +298,28 @@ onUnmounted(() => {
     <section class="form-container">
       <p class="eyebrow">VOTACIÓN</p>
 
-      <div v-if="isLoading">
+      <div v-if="isLoading" class="loading-message" role="status" aria-busy="true">
         Cargando votación...
       </div>
 
       <div
         v-else-if="errorMessage && !poll"
         class="error-message"
+        role="alert"
       >
-        {{ errorMessage }}
+        <p>{{ errorMessage }}</p>
+        <button type="button" class="retry-button" @click="loadPoll">Volver a intentar</button>
       </div>
 
       <div v-else-if="poll">
         <h1>{{ poll.title }}</h1>
+
+        <RealtimeNotice
+          :state="connectionState"
+          :busy="isReconnecting || isSubmitting"
+          @reconnect="reconnectLive"
+        />
+        <p v-if="storageWarning" class="warning-message" role="status">{{ storageWarning }}</p>
 
         <p v-if="poll.description">
           {{ poll.description }}
@@ -291,7 +352,7 @@ onUnmounted(() => {
             :class="{
               selected: selectedOptionIds.includes(option.id),
             }"
-            :disabled="!poll.is_active"
+            :disabled="!poll.is_active || isSubmitting"
             @click="toggleOption(option.id)"
           >
             <span>{{ option.text }}</span>
@@ -317,7 +378,7 @@ onUnmounted(() => {
 
             <button
               type="button"
-              :disabled="!poll.is_active || index === 0"
+              :disabled="!poll.is_active || isSubmitting || index === 0"
               aria-label="Subir opción"
               @click="moveRanking(index, -1)"
             >
@@ -326,7 +387,7 @@ onUnmounted(() => {
 
             <button
               type="button"
-              :disabled="!poll.is_active || index === rankingOptionIds.length - 1"
+              :disabled="!poll.is_active || isSubmitting || index === rankingOptionIds.length - 1"
               aria-label="Bajar opción"
               @click="moveRanking(index, 1)"
             >
@@ -353,11 +414,13 @@ onUnmounted(() => {
         </p>
 
         <!-- BOTÓN DE VOTACIÓN -->
+        <p v-if="isSubmitting" class="loading-message" role="status">Guardando tu voto...</p>
         <button
           v-if="poll.is_active"
           type="button"
           class="create-button"
           :disabled="isSubmitting"
+          :aria-busy="isSubmitting"
           @click="submitVote"
         >
           {{
@@ -371,7 +434,7 @@ onUnmounted(() => {
           <span v-if="!isSubmitting">→</span>
         </button>
 
-        <p v-if="!poll.is_active" class="error-message">
+        <p v-if="!poll.is_active" class="warning-message" role="status">
           Esta votación está cerrada.
         </p>
 
@@ -385,18 +448,21 @@ onUnmounted(() => {
             </span>
           </div>
 
-          <p v-if="isLoadingResults">
+          <p v-if="isLoadingResults" class="loading-message" role="status">
             Cargando resultados...
           </p>
 
-          <p
+          <div
             v-else-if="resultsError"
             class="error-message"
+            role="alert"
           >
-            {{ resultsError }}
-          </p>
+            <p>{{ resultsError }}</p>
+            <p v-if="results">Se muestran los últimos resultados recibidos.</p>
+            <button type="button" class="retry-button" @click="loadResults">Volver a cargar resultados</button>
+          </div>
 
-          <div v-else-if="results">
+          <div v-if="results">
             <div
               v-for="result in results.results"
               :key="result.option_id"

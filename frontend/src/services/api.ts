@@ -1,54 +1,94 @@
-
 const API_URL = import.meta.env.VITE_API_URL
+const REQUEST_TIMEOUT_MS = 15000
 
-// Envía una petición a la API y convierte sus errores en mensajes para la interfaz.
+// Conserva el código HTTP para distinguir errores de acceso, validación y servidor.
+export class ApiError extends Error {
+  status: number
+
+  // Asocia un mensaje comprensible al estado devuelto por la API.
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+  }
+}
+
+// Traduce los errores de validación de FastAPI sin mostrar mensajes técnicos.
+function validationMessage(detail: unknown): string {
+  if (Array.isArray(detail)) {
+    const fields: Record<string, string> = {
+      title: 'el título',
+      option_texts: 'las opciones de respuesta',
+      poll_type: 'el tipo de votación',
+      max_selections: 'el máximo de opciones seleccionables',
+      closes_at: 'la fecha de cierre y su zona horaria',
+      selected_option_ids: 'las opciones de tu voto',
+    }
+
+    for (const item of detail) {
+      if (typeof item !== 'object' || item === null || !Array.isArray(item.loc)) continue
+      if (item.loc[0] === 'path') {
+        return 'El enlace de la votación no es válido. Comprueba que lo has copiado completo.'
+      }
+      const field = String(item.loc[1])
+      if (field === 'X-Admin-Token') {
+        return 'Falta el acceso de administración. Abre el enlace privado completo de esta votación.'
+      }
+      if (fields[field]) return `Revisa ${fields[field]} e inténtalo de nuevo.`
+    }
+  }
+
+  return 'Revisa los datos del formulario e inténtalo de nuevo.'
+}
+
+// Elige un mensaje útil sin exponer detalles internos de los errores del servidor.
+function responseMessage(status: number, data: unknown): string {
+  const detail = typeof data === 'object' && data !== null && 'detail' in data
+    ? data.detail
+    : null
+
+  if (status >= 500) return 'El servidor no puede completar la operación ahora. Inténtalo de nuevo en unos instantes.'
+  if (status === 404) {
+    if (typeof detail === 'string' && detail.includes('todavía no ha votado')) return detail
+    return 'No se ha encontrado la votación. Comprueba el enlace o pide uno nuevo a quien la creó.'
+  }
+  if (status === 403 || status === 401) return 'El acceso de administración no es válido para esta votación. Abre su enlace privado completo.'
+  if (status === 422) return validationMessage(detail)
+  if (status === 429) return 'Se han enviado demasiadas peticiones. Espera unos instantes antes de volver a intentarlo.'
+  if (typeof detail === 'string' && detail.trim()) return detail
+  return 'No se ha podido completar la operación. Vuelve a intentarlo.'
+}
+
+// Envía una petición con tiempo límite y transforma los fallos en mensajes comprensibles.
 export async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-  })
+  const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+  const headers = new Headers(options.headers)
+  if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
 
-  const data: unknown = await response.json().catch(() => null)
+  try {
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      ...options,
+      headers,
+      signal: options.signal ? AbortSignal.any([options.signal, timeout]) : timeout,
+    })
+    const data: unknown = await response.json().catch(error => {
+      // Propaga las cancelaciones para conservar el mensaje de tiempo de espera.
+      if (timeout.aborted || options.signal?.aborted) throw error
+      return null
+    })
 
-  if (!response.ok) {
-    let detail: unknown = null
-
-    if (
-      typeof data === 'object' &&
-      data !== null &&
-      'detail' in data
-    ) {
-      detail = data.detail
+    if (!response.ok) throw new ApiError(responseMessage(response.status, data), response.status)
+    if (data === null) throw new ApiError('El servidor ha devuelto una respuesta inesperada. Vuelve a intentarlo.', response.status)
+    return data as T
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    if (timeout.aborted) {
+      throw new Error('El servidor está tardando demasiado. Comprueba si la operación se ha completado antes de repetirla.')
     }
-
-    let message = `Error HTTP: ${response.status}`
-
-    if (typeof detail === 'string') {
-      message = detail
-    } else if (Array.isArray(detail)) {
-      message = detail
-        .map(item => {
-          if (
-            typeof item === 'object' &&
-            item !== null &&
-            'msg' in item
-          ) {
-            return String(item.msg)
-          }
-
-          return 'Error de validación'
-        })
-        .join('. ')
-    }
-
-    throw new Error(message)
+    if (options.signal?.aborted) throw new Error('La petición se ha cancelado. Puedes volver a intentarlo.')
+    throw new Error('No se puede conectar con el servidor. Comprueba tu conexión y vuelve a intentarlo.')
   }
-
-  return data as T
 }

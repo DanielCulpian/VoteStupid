@@ -3,6 +3,7 @@ import PollView from '../views/PollView.vue'
 import HomeView from '../views/HomeView.vue'
 import CreatePollView from '../views/CreatePollView.vue'
 import AdminView from '../views/AdminView.vue'
+import NotFoundView from '../views/NotFoundView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -26,6 +27,11 @@ const router = createRouter({
       path: '/admin/:id',
       name: 'admin',
       component: AdminView,
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      component: NotFoundView,
     },
   ],
 })

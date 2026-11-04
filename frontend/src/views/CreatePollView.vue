@@ -10,7 +10,7 @@ const title = ref('')
 const description = ref('')
 const pollType = ref<PollType>('single_choice')
 const options = ref(['', ''])
-const maxSelections = ref<number | null>(null)
+const maxSelections = ref<number | string | null>(null)
 const closesAt = ref('')
 const publicUrl = ref('')
 const adminUrl = ref('')
@@ -20,21 +20,26 @@ const createdPoll = ref<PollCreatedResponse | null>(null)
 
 // Añade una opción vacía al formulario de creación de votaciones.
 function addOption() {
+  if (isSubmitting.value) return
   options.value.push('')
 }
 
 // Elimina una opción del formulario conservando al menos dos opciones.
 function removeOption(index: number) {
-  if (options.value.length <= 2) return
+  if (isSubmitting.value || options.value.length <= 2) return
   options.value.splice(index, 1)
 }
 
 // Valida el formulario, crea la votación y prepara sus enlaces público y de administración.
 async function submitPoll() {
+  if (isSubmitting.value) return
   errorMessage.value = ''
   createdPoll.value = null
 
   const cleanedOptions = options.value.map(option => option.trim())
+  const selectionLimit = maxSelections.value === null || maxSelections.value === ''
+    ? null
+    : Number(maxSelections.value)
 
   if (!title.value.trim()) {
     errorMessage.value = 'El título no puede estar vacío.'
@@ -48,11 +53,11 @@ async function submitPoll() {
 
   if (
     pollType.value === 'multiple_choice' &&
-    maxSelections.value !== null &&
+    selectionLimit !== null &&
     (
-      !Number.isInteger(maxSelections.value) ||
-      maxSelections.value < 1 ||
-      maxSelections.value > cleanedOptions.length
+      !Number.isInteger(selectionLimit) ||
+      selectionLimit < 1 ||
+      selectionLimit > cleanedOptions.length
     )
   ) {
     errorMessage.value =
@@ -70,7 +75,7 @@ async function submitPoll() {
       option_texts: cleanedOptions,
       max_selections:
         pollType.value === 'multiple_choice'
-          ? maxSelections.value
+          ? selectionLimit
           : null,
       closes_at: closesAt.value
         ? new Date(closesAt.value).toISOString()
@@ -106,7 +111,7 @@ async function submitPoll() {
       <p class="eyebrow">NUEVA VOTACIÓN</p>
       <h1>Vamos a <span>decidir.</span></h1>
 
-      <div v-if="createdPoll" class="success-message">
+      <div v-if="createdPoll" class="success-message" role="status">
         <h2>¡Votación creada!</h2>
         <p>Tu votación se ha guardado correctamente.</p>
 
@@ -132,11 +137,13 @@ async function submitPoll() {
       <form
         v-else
         class="poll-form"
+        :aria-busy="isSubmitting"
         @submit.prevent="submitPoll"
       >
         <label for="title">Título de la votación</label>
         <input
           id="title"
+          :disabled="isSubmitting"
           v-model="title"
           type="text"
           placeholder="Ej. ¿Dónde vamos a cenar?"
@@ -146,13 +153,14 @@ async function submitPoll() {
         <label for="description">Descripción (opcional)</label>
         <textarea
           id="description"
+          :disabled="isSubmitting"
           v-model="description"
           placeholder="Añade un poco de contexto..."
           rows="3"
         />
 
         <label for="poll-type">Tipo de votación</label>
-        <select id="poll-type" v-model="pollType">
+        <select id="poll-type" v-model="pollType" :disabled="isSubmitting">
           <option value="single_choice">Elección única</option>
           <option value="multiple_choice">Selección múltiple</option>
           <option value="ranking">Ranking</option>
@@ -164,6 +172,7 @@ async function submitPoll() {
           </label>
           <input
             id="max-selections"
+            :disabled="isSubmitting"
             v-model.number="maxSelections"
             type="number"
             min="1"
@@ -187,6 +196,7 @@ async function submitPoll() {
         >
           <input
             v-model="options[index]"
+            :disabled="isSubmitting"
             :aria-label="`Opción ${index + 1}`"
             type="text"
             :placeholder="`Opción ${index + 1}`"
@@ -197,7 +207,7 @@ async function submitPoll() {
             type="button"
             class="remove-button"
             :aria-label="`Eliminar opción ${index + 1}`"
-            :disabled="options.length <= 2"
+            :disabled="isSubmitting || options.length <= 2"
             @click="removeOption(index)"
           >
             ×
@@ -207,6 +217,7 @@ async function submitPoll() {
         <button
           type="button"
           class="add-button"
+          :disabled="isSubmitting"
           @click="addOption"
         >
           + Añadir opción
@@ -215,6 +226,7 @@ async function submitPoll() {
         <label for="closes-at">Fecha de cierre (opcional)</label>
         <input
           id="closes-at"
+          :disabled="isSubmitting"
           v-model="closesAt"
           type="datetime-local"
         />
@@ -222,6 +234,8 @@ async function submitPoll() {
         <p v-if="errorMessage" class="error-message" role="alert">
           {{ errorMessage }}
         </p>
+
+        <p v-if="isSubmitting" class="loading-message" role="status">Creando tu votación. Espera un momento...</p>
 
         <button
           class="create-button"

@@ -38,6 +38,8 @@ a:focus-visible {
 }
 
 .home {
+  width: 100%;
+  min-width: 0;
   min-height: 100vh;
   min-height: 100svh;
   display: flex;
@@ -166,6 +168,7 @@ h1 span {
 
 .form-container {
   width: 100%;
+  min-width: 0;
   max-width: 680px;
   margin: 60px auto;
 }
@@ -301,6 +304,69 @@ h1 span {
   margin: 0;
   color: #888;
   font-size: 12px;
+}
+
+/* Los estados se anuncian también a lectores de pantalla mediante role=status o alert. */
+.loading-message {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  line-height: 1.5;
+  color: #555;
+}
+
+.loading-message::before {
+  content: '';
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border: 3px solid #e8e5de;
+  border-top-color: #f15b42;
+  border-radius: 50%;
+  animation: loading-spin 0.8s linear infinite;
+}
+
+@keyframes loading-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-message::before {
+    animation: none;
+  }
+}
+
+.warning-message {
+  margin: 20px 0;
+  padding: 16px;
+  border: 1px solid #e6c26f;
+  border-radius: 8px;
+  background: #fff8e5;
+  color: #694b12;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.warning-message p:first-child,
+.error-message p:first-child {
+  margin-top: 0;
+}
+
+.retry-button {
+  max-width: 100%;
+  padding: 12px 16px;
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.retry-button:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }
 
 .create-button:disabled {
