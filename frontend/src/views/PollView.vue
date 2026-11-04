@@ -61,9 +61,17 @@ onMounted(async () => {
     poll.value = await getPoll(String(route.params.id))
 
     if (poll.value) {
-      socket = connectToPoll(poll.value.id, updatedResults => {
-        results.value = updatedResults as PollResults
-      })
+      socket = connectToPoll(
+        poll.value.id,
+        updatedResults => {
+          results.value = updatedResults as PollResults
+        },
+        isActive => {
+          if (poll.value) {
+            poll.value.is_active = isActive
+          }
+        },
+      )
     }
 
     rankingOptionIds.value = poll.value.options.map(
@@ -113,8 +121,9 @@ onMounted(async () => {
   }
 })
 
+// Cambia la selección de opciones solo si la votación está abierta.
 function toggleOption(optionId: string) {
-  if (!poll.value) return
+  if (!poll.value || !poll.value.is_active) return
 
   successMessage.value = ''
   errorMessage.value = ''
@@ -145,7 +154,10 @@ function toggleOption(optionId: string) {
   selectedOptionIds.value = [...selected, optionId]
 }
 
+// Reordena una opción del ranking solo si la votación está abierta.
 function moveRanking(index: number, direction: number) {
+  if (!poll.value?.is_active) return
+
   const newIndex = index + direction
 
   if (
@@ -168,8 +180,9 @@ function moveRanking(index: number, direction: number) {
   rankingOptionIds.value = updated
 }
 
+// Registra o actualiza el voto si la votación está abierta y no hay otro envío.
 async function submitVote() {
-  if (!poll.value || isSubmitting.value) return
+  if (!poll.value || !poll.value.is_active || isSubmitting.value) return
 
   errorMessage.value = ''
   successMessage.value = ''
@@ -272,6 +285,7 @@ onUnmounted(() => {
             :class="{
               selected: selectedOptionIds.includes(option.id),
             }"
+            :disabled="!poll.is_active"
             @click="toggleOption(option.id)"
           >
             <span>{{ option.text }}</span>
@@ -297,7 +311,7 @@ onUnmounted(() => {
 
             <button
               type="button"
-              :disabled="index === 0"
+              :disabled="!poll.is_active || index === 0"
               aria-label="Subir opción"
               @click="moveRanking(index, -1)"
             >
@@ -306,7 +320,7 @@ onUnmounted(() => {
 
             <button
               type="button"
-              :disabled="index === rankingOptionIds.length - 1"
+              :disabled="!poll.is_active || index === rankingOptionIds.length - 1"
               aria-label="Bajar opción"
               @click="moveRanking(index, 1)"
             >

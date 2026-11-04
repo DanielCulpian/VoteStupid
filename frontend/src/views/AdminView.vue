@@ -1,11 +1,12 @@
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import type { PollResponse } from '../types/poll'
 import type { PollResults } from '../services/resultsService'
 import { getAdminPoll, closePoll, reopenPoll } from '../services/adminService'
 import { getPollResults } from '../services/resultsService'
+import { connectToPoll } from '../services/websocketService'
 
 const route = useRoute()
 const pollId = String(route.params.id)
@@ -13,6 +14,8 @@ const pollId = String(route.params.id)
 const poll = ref<PollResponse | null>(null)
 const results = ref<PollResults | null>(null)
 const adminToken = ref('')
+
+let pollSocket: WebSocket | null = null
 
 const isLoading = ref(true)
 const isUpdating = ref(false)
@@ -52,6 +55,9 @@ async function loadAdminPanel() {
 
     poll.value = await getAdminPoll(pollId, savedToken)
     results.value = await getPollResults(pollId)
+    pollSocket = connectToPoll(pollId, updatedResults => {
+      results.value = updatedResults as PollResults
+    })
   } catch (error) {
     errorMessage.value =
       error instanceof Error
@@ -101,6 +107,11 @@ async function copyPublicLink() {
 }
 
 onMounted(loadAdminPanel)
+
+onUnmounted(() => {
+  pollSocket?.close()
+  pollSocket = null
+})
 </script>
 
 <template>

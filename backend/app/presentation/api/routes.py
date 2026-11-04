@@ -45,6 +45,13 @@ def build_results_message(results: PollResultsResponse) -> dict:
         "results": results.model_dump(mode="json"),
     }
 
+def build_poll_status_message(poll: Poll) -> dict:
+    """Construye el mensaje WebSocket con el estado de la votación."""
+    return {
+        "type": "poll_status_updated",
+        "is_active": poll.is_active,
+    }
+
 @router.get("/")
 def home():
     return {
@@ -322,12 +329,17 @@ async def poll_updates(
         connection_manager.disconnect(poll_id, websocket)
 
 @router.put("/api/admin/polls/{poll_id}/close", response_model=PollResponse)
-def close_poll(
+async def close_poll(
     poll_id: UUID,
     admin_poll: Poll = Depends(get_admin_poll_dependency),
     use_case: ClosePoll = Depends(get_close_poll_use_case),
 ):
     poll = use_case.execute(admin_poll.id)
+
+    await connection_manager.broadcast(
+        poll.id,
+        build_poll_status_message(poll),
+    )
 
     return PollResponse(
         id=poll.id,
@@ -343,12 +355,17 @@ def close_poll(
 
 
 @router.put("/api/admin/polls/{poll_id}/reopen", response_model=PollResponse)
-def reopen_poll(
+async def reopen_poll(
     poll_id: UUID,
     admin_poll: Poll = Depends(get_admin_poll_dependency),
     use_case: ReopenPoll = Depends(get_reopen_poll_use_case),
 ):
     poll = use_case.execute(admin_poll.id)
+
+    await connection_manager.broadcast(
+        poll.id,
+        build_poll_status_message(poll),
+    )
 
     return PollResponse(
         id=poll.id,
