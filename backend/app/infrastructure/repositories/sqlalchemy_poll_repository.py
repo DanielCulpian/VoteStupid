@@ -1,11 +1,13 @@
 from uuid import UUID
 
 from sqlalchemy import select, func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from app.domain.entities.poll import Poll
 from app.domain.entities.vote import Vote
 from app.domain.repositories.poll_repository import PollRepository
+from app.domain.vote_rule_error import VoteRuleError
 
 from app.infrastructure.mappers.poll_mapper import to_entity as poll_to_entity
 from app.infrastructure.mappers.poll_mapper import to_model as poll_to_model
@@ -69,10 +71,15 @@ class SqlAlchemyPollRepository(PollRepository):
         return vote_to_entity(vote_model)
 
     def save_vote(self, vote: Vote) -> None:
-        """Guarda un nuevo voto con sus opciones seleccionadas."""
+        """Guarda el voto y convierte un duplicado concurrente en un conflicto de participación."""
         vote_model = vote_to_model(vote)
         self.session.add(vote_model)
-        self._commit()
+        try:
+            self._commit()
+        except IntegrityError as error:
+            if getattr(getattr(error.orig, "diag", None), "constraint_name", None) == "uq_vote_poll_voter":
+                raise VoteRuleError("Este participante ya ha votado.") from error
+            raise
 
     def update_vote(self, vote: Vote) -> None:
         """Sustituye las selecciones del voto existente y guarda su fecha de modificación."""
