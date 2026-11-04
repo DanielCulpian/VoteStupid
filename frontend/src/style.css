@@ -23,10 +23,23 @@ body {
 
 button {
   font: inherit;
+  min-height: 48px;
+  touch-action: manipulation;
+}
+
+#app {
+  overflow-wrap: anywhere;
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 3px solid #202020;
+  outline-offset: 4px;
 }
 
 .home {
   min-height: 100vh;
+  min-height: 100svh;
   display: flex;
   flex-direction: column;
   padding: 32px 7%;
@@ -36,6 +49,8 @@ button {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .logo {
@@ -102,6 +117,10 @@ h1 span {
   font-weight: 700;
   cursor: pointer;
   transition: background 0.2s, transform 0.2s;
+  width: fit-content;
+  max-width: 100%;
+  text-decoration: none;
+  justify-content: space-between;
 }
 
 .create-button:hover {
@@ -152,7 +171,9 @@ h1 span {
 }
 
 .form-container h1 {
-  font-size: clamp(42px, 7vw, 68px);
+  font-size: clamp(32px, 6vw, 60px);
+  letter-spacing: -1.5px;
+  line-height: 1.12;
 }
 
 .poll-form {
@@ -179,6 +200,9 @@ h1 span {
   color: #202020;
   font: inherit;
   outline: none;
+  min-width: 0;
+  min-height: 48px;
+  font-size: 16px;
 }
 
 .poll-form input:focus,
@@ -191,6 +215,8 @@ h1 span {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .options-header span {
@@ -203,8 +229,14 @@ h1 span {
   gap: 10px;
 }
 
+.option-row input {
+  flex: 1;
+  min-width: 0;
+}
+
 .remove-button {
   width: 48px;
+  flex-shrink: 0;
   border: 1px solid #e3dfd7;
   border-radius: 8px;
   background: white;
@@ -301,6 +333,22 @@ h1 span {
   color: inherit;
   font: inherit;
   transition: border-color 0.2s, background 0.2s;
+  gap: 16px;
+  min-height: 56px;
+  line-height: 1.5;
+}
+
+.poll-option > span:first-child {
+  min-width: 0;
+}
+
+.poll-option > span:last-child {
+  flex-shrink: 0;
+}
+
+.poll-option:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .poll-option.selected {
@@ -309,7 +357,8 @@ h1 span {
 }
 
 .ranking-option {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 48px 48px;
   align-items: center;
   gap: 12px;
   padding: 14px;
@@ -319,16 +368,18 @@ h1 span {
 }
 
 .ranking-text {
-  flex: 1;
+  min-width: 0;
+  line-height: 1.5;
 }
 
 .ranking-option button {
-  width: 36px;
-  height: 36px;
+  width: 48px;
+  height: 48px;
   border: 1px solid #ddd;
   border-radius: 7px;
   background: white;
   cursor: pointer;
+  font-size: 22px;
 }
 
 .ranking-option button:disabled {
@@ -350,6 +401,19 @@ h1 span {
   margin: 40px auto;
 }
 
+.admin-page h1 {
+  font-size: clamp(32px, 6vw, 52px);
+  letter-spacing: -1.5px;
+  line-height: 1.12;
+}
+
+.admin-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 24px;
+}
+
 .admin-card {
   margin: 24px 0;
   padding: 24px;
@@ -358,8 +422,139 @@ h1 span {
   background: white;
 }
 
-.admin-card button {
-  margin: 8px 8px 8px 0;
+.admin-actions button {
+  padding: 12px 16px;
+  border: 1px solid #e3dfd7;
+  border-radius: 8px;
+  background: #faf8f3;
+  color: #202020;
+  cursor: pointer;
+}
+
+.admin-actions button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* Las etiquetas largas se ajustan sin reducir el espacio de los recuentos. */
+.results-section {
+  margin-top: 48px;
+}
+
+.results-header,
+.result-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.results-header h2 {
+  margin: 0;
+}
+
+.result-row {
+  margin-top: 24px;
+}
+
+.result-label strong {
+  flex: 1 1 160px;
+  min-width: 0;
+  line-height: 1.5;
+}
+
+.result-label > span,
+.results-header > span {
+  flex-shrink: 0;
+  color: #666;
+}
+
+.result-bar {
+  height: 12px;
+  margin-top: 10px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: #e8e5de;
+}
+
+.result-bar-fill {
+  height: 100%;
+  max-width: 100%;
+  border-radius: inherit;
+  background: #f15b42;
+  transition: width 0.2s;
+}
+
+.result-percentage {
+  margin: 8px 0 0;
+  color: #666;
+  font-size: 14px;
+}
+
+/* En móvil dejamos más anchura útil y mantenemos objetivos táctiles de 48 px. */
+@media (max-width: 600px) {
+  .home {
+    padding: 20px 16px;
+  }
+
+  .hero {
+    padding: 56px 0;
+  }
+
+  .hero h1 {
+    font-size: clamp(38px, 10vw, 56px);
+    letter-spacing: -1.5px;
+    line-height: 1.08;
+  }
+
+  .form-container {
+    margin: 32px auto;
+  }
+
+  .poll-form {
+    margin-top: 24px;
+  }
+
+  .create-button,
+  .poll-form .create-button {
+    width: 100%;
+    gap: 16px;
+  }
+
+  .ranking-option {
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .success-message,
+  .admin-card {
+    padding: 16px;
+  }
+
+  .admin-page {
+    width: calc(100% - 32px);
+    margin: 20px auto;
+  }
+
+  .admin-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* En móviles estrechos, el texto del ranking ocupa una fila y las flechas otra. */
+@media (max-width: 400px) {
+  .ranking-text {
+    grid-column: 2 / -1;
+  }
+
+  .ranking-option button:first-of-type {
+    grid-column: 3;
+  }
+
+  .ranking-option button:last-of-type {
+    grid-column: 4;
+  }
 }
 
 .success-message {

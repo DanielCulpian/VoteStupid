@@ -121,6 +121,9 @@ onUnmounted(() => {
 
 <template>
   <main class="admin-page">
+    <nav class="header" aria-label="Navegación principal">
+      <RouterLink class="logo" to="/">VoteStupid<span>!</span></RouterLink>
+    </nav>
     <header>
       <h1>Panel de administración</h1>
       <p>Gestiona tu votación desde aquí.</p>
@@ -144,23 +147,25 @@ onUnmounted(() => {
           </strong>
         </p>
 
-        <button
-          type="button"
-          :disabled="isUpdating"
-          @click="updatePollStatus"
-        >
-          {{
-            isUpdating
-              ? 'Actualizando...'
-              : poll.is_active
-                ? 'Cerrar votación'
-                : 'Reabrir votación'
-          }}
-        </button>
+        <div class="admin-actions">
+          <button
+            type="button"
+            :disabled="isUpdating"
+            @click="updatePollStatus"
+          >
+            {{
+              isUpdating
+                ? 'Actualizando...'
+                : poll.is_active
+                  ? 'Cerrar votación'
+                  : 'Reabrir votación'
+            }}
+          </button>
 
-        <button type="button" @click="copyPublicLink">
-          Copiar enlace público
-        </button>
+          <button type="button" @click="copyPublicLink">
+            Copiar enlace público
+          </button>
+        </div>
       </section>
 
       <p v-if="successMessage" class="success-message">
@@ -171,16 +176,28 @@ onUnmounted(() => {
         <h2>Resultados</h2>
         <p>Participantes: {{ results.total_votes }}</p>
 
-        <ul>
-          <li
-            v-for="result in results.results"
-            :key="result.option_id"
-          >
-            {{ result.option_text }}:
-            {{ result.votes }} votos
-            ({{ result.percentage.toFixed(1) }} %)
-          </li>
-        </ul>
+        <div
+          v-for="result in results.results"
+          :key="result.option_id"
+          class="result-row"
+        >
+          <div class="result-label">
+            <strong>{{ result.option_text }}</strong>
+            <span>{{ result.votes }} votos</span>
+          </div>
+          <div class="result-bar">
+            <div
+              class="result-bar-fill"
+              :style="{ width: `${result.percentage}%` }"
+            />
+          </div>
+          <p class="result-percentage">
+            {{ result.percentage.toFixed(1) }}%
+            <span v-if="poll.poll_type === 'ranking'">
+              · {{ result.points }} puntos
+            </span>
+          </p>
+        </div>
       </section>
     </template>
   </main>

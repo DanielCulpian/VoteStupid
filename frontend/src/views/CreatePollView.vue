@@ -107,27 +107,25 @@ async function submitPoll() {
       <h1>Vamos a <span>decidir.</span></h1>
 
       <div v-if="createdPoll" class="success-message">
-        <div v-if="createdPoll" class="success-message">
-          <h2>¡Votación creada!</h2>
-          <p>Tu votación se ha guardado correctamente.</p>
+        <h2>¡Votación creada!</h2>
+        <p>Tu votación se ha guardado correctamente.</p>
 
-          <div class="created-link">
-            <h3>Enlace para los participantes</h3>
-            <a :href="publicUrl" target="_blank">
-              {{ publicUrl }}
-            </a>
-          </div>
+        <div class="created-link">
+          <h3>Enlace para los participantes</h3>
+          <a :href="publicUrl" target="_blank">
+            {{ publicUrl }}
+          </a>
+        </div>
 
-          <div class="created-link">
-            <h3>Enlace privado de administración</h3>
-            <a :href="adminUrl">
-              Abrir panel de administración →
-            </a>
-            <p>
-              Guarda este enlace. Cualquiera que lo tenga podrá administrar
-              tu votación.
-            </p>
-          </div>
+        <div class="created-link">
+          <h3>Enlace privado de administración</h3>
+          <a :href="adminUrl">
+            Abrir panel de administración →
+          </a>
+          <p>
+            Guarda este enlace. Cualquiera que lo tenga podrá administrar
+            tu votación.
+          </p>
         </div>
       </div>
 
@@ -189,6 +187,7 @@ async function submitPoll() {
         >
           <input
             v-model="options[index]"
+            :aria-label="`Opción ${index + 1}`"
             type="text"
             :placeholder="`Opción ${index + 1}`"
             required
@@ -197,6 +196,7 @@ async function submitPoll() {
           <button
             type="button"
             class="remove-button"
+            :aria-label="`Eliminar opción ${index + 1}`"
             :disabled="options.length <= 2"
             @click="removeOption(index)"
           >
