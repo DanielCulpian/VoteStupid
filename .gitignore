@@ -21,3 +21,9 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Local development files
+/AGENTS.md
+/iniciar_votestupid.ps1
+/cerrar_votestupid.ps1
+/instrucciones_desarrollo.txt
