@@ -6,7 +6,7 @@ import type { PollResponse } from '../types/poll'
 import type { PollResults } from '../services/resultsService'
 import { getAdminPoll, closePoll, reopenPoll } from '../services/adminService'
 import { getPollResults } from '../services/resultsService'
-import { connectToPoll, type RealtimeConnectionState } from '../services/websocketService'
+import { connectToPoll, type RealtimeConnectionState, type PollConnection } from '../services/websocketService'
 import RealtimeNotice from '../components/RealtimeNotice.vue'
 import LiveAnnouncer from '../components/LiveAnnouncer.vue'
 import { rememberPoll } from '../services/historyService'
@@ -18,7 +18,7 @@ const poll = ref<PollResponse | null>(null)
 const results = ref<PollResults | null>(null)
 const adminToken = ref('')
 
-let pollSocket: WebSocket | null = null
+let pollSocket: PollConnection | null = null
 let connectionVersion = 0
 let isDisposed = false
 
@@ -83,6 +83,18 @@ function connectLive() {
       state => {
         if (version === connectionVersion && !isDisposed) connectionState.value = state
       },
+      // Revalida el acceso y recupera el estado y los resultados tras cada conexión.
+      async isCurrent => {
+        if (isDisposed || version !== connectionVersion || !isCurrent()) return
+        const [currentPoll, currentResults] = await Promise.all([
+          getAdminPoll(pollId, adminToken.value), getPollResults(pollId),
+        ])
+        if (isDisposed || version !== connectionVersion || !isCurrent()) return
+        poll.value = currentPoll
+        results.value = currentResults
+        resultsError.value = ''
+        rememberCurrentPoll()
+      },
     )
   } catch {
     connectionState.value = 'disconnected'
@@ -125,8 +137,8 @@ async function loadAdminPanel() {
     poll.value = await getAdminPoll(pollId, savedToken)
     if (isDisposed) return
     rememberCurrentPoll()
-    connectLive()
     await loadResults()
+    connectLive()
   } catch (error) {
     errorMessage.value =
       error instanceof Error
@@ -217,7 +229,7 @@ onUnmounted(() => {
 
     <template v-else-if="poll">
       <p v-if="historyWarning" class="warning-message" role="alert">{{ historyWarning }}</p>
-      <RealtimeNotice :state="connectionState" :busy="isUpdating || isLoading" @reconnect="loadAdminPanel" />
+      <RealtimeNotice :state="connectionState" :busy="isUpdating || isLoading" @reconnect="connectLive" />
       <p v-if="errorMessage" class="error-message" role="alert">{{ errorMessage }}</p>
       <section class="admin-card">
         <h2>{{ poll.title }}</h2>

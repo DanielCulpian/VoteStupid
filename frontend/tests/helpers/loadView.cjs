@@ -24,7 +24,7 @@ function loadView(filename, services = {}, globals = {}) {
         // El montaje y desmontaje se ejercitan explícitamente desde cada prueba.
         onMounted() {},
         // Evita registrar un ciclo de vida real cuando solo se prueba la lógica.
-        onUnmounted() {},
+        onUnmounted(callback) { globals.captureUnmount?.(callback) },
       }
       if (name === 'vue-router') return {
         // Proporciona el identificador de la votación del escenario de prueba.

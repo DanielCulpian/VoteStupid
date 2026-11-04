@@ -8,7 +8,7 @@ import {
 } from '../services/resultsService'
 import type { PollResponse } from '../types/poll'
 import { nextTick, onMounted, onUnmounted, ref } from 'vue'
-import { connectToPoll, type RealtimeConnectionState } from '../services/websocketService'
+import { connectToPoll, type RealtimeConnectionState, type PollConnection } from '../services/websocketService'
 import RealtimeNotice from '../components/RealtimeNotice.vue'
 import LiveAnnouncer from '../components/LiveAnnouncer.vue'
 
@@ -26,7 +26,6 @@ const resultsError = ref('')
 const successMessage = ref('')
 const storageWarning = ref('')
 const connectionState = ref<RealtimeConnectionState>('connecting')
-const isReconnecting = ref(false)
 const rankingAnnouncement = ref('')
 const statusAnnouncement = ref('')
 
@@ -34,7 +33,7 @@ const selectedOptionIds = ref<string[]>([])
 const rankingOptionIds = ref<string[]>([])
 const hasVoted = ref(false)
 
-let socket: WebSocket | null = null
+let socket: PollConnection | null = null
 let connectionVersion = 0
 let isDisposed = false
 
@@ -99,6 +98,17 @@ function connectLive() {
       state => {
         if (version === connectionVersion && !isDisposed) connectionState.value = state
       },
+      // Recupera los cambios perdidos sin alterar las opciones seleccionadas por el usuario.
+      async isCurrent => {
+        if (isDisposed || version !== connectionVersion || !isCurrent()) return
+        const id = String(route.params.id)
+        const [currentPoll, currentResults] = await Promise.all([getPoll(id), getPollResults(id)])
+        if (isDisposed || version !== connectionVersion || !isCurrent()) return
+        poll.value = currentPoll
+        results.value = currentResults
+        resultsError.value = ''
+        statusAnnouncement.value = currentPoll.is_active ? 'La votación está abierta.' : 'La votación está cerrada.'
+      },
     )
   } catch {
     connectionState.value = 'disconnected'
@@ -106,19 +116,9 @@ function connectLive() {
 }
 
 // Reconecta el directo y recupera el estado y los resultados que pudieron cambiar durante el corte.
-async function reconnectLive() {
-  if (!poll.value || isReconnecting.value || isSubmitting.value) return
-  isReconnecting.value = true
-  errorMessage.value = ''
+function reconnectLive() {
+  if (!poll.value || isSubmitting.value || isDisposed) return
   connectLive()
-  try {
-    poll.value = await getPoll(poll.value.id)
-    await loadResults()
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : 'No se ha podido recuperar la votación.'
-  } finally {
-    isReconnecting.value = false
-  }
 }
 
 // Carga la votación, recupera el voto local y permite reintentar si falla el enlace o el servidor.
@@ -129,7 +129,6 @@ async function loadPoll() {
   try {
     poll.value = await getPoll(String(route.params.id))
     if (isDisposed) return
-    connectLive()
 
     rankingOptionIds.value = poll.value.options.map(
       option => option.id,
@@ -169,6 +168,7 @@ async function loadPoll() {
     }
 
     await loadResults()
+    connectLive()
   } catch (error) {
     errorMessage.value =
       error instanceof Error
@@ -345,7 +345,7 @@ onUnmounted(() => {
 
         <RealtimeNotice
           :state="connectionState"
-          :busy="isReconnecting || isSubmitting"
+          :busy="isSubmitting"
           @reconnect="reconnectLive"
         />
         <p v-if="storageWarning" class="warning-message" role="status">{{ storageWarning }}</p>

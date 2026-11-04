@@ -157,3 +157,56 @@ test('conserva la administración y permite cerrar y reabrir tras un fallo', asy
   assert.equal(view.poll.value.is_active, true)
   assert.match(view.successMessage.value, /se ha reabierto/)
 })
+
+// Comprueba ambas vistas con datos cambiados durante el corte y limpieza al navegar.
+for (const filename of ['PollView.vue', 'AdminView.vue']) {
+  test(`${filename}: recupera resultados y estado sin perder selecciones y cancela al salir`, async () => {
+    let callbacks, unmount, closed = 0
+    let current = { ...poll }, total = 0
+    const view = loadView(filename, {
+      '../services/pollService': {
+        // Devuelve el estado actual que pudo cambiar durante la desconexion.
+        getPoll: async () => ({ ...current }),
+      },
+      '../services/adminService': {
+        // Simula la revalidacion del token administrativo de la sesion.
+        getAdminPoll: async () => ({ ...current }),
+      },
+      '../services/voteService': {},
+      '../services/resultsService': {
+        // Devuelve los votos emitidos por otro cliente durante el corte.
+        getPollResults: async () => ({ total_votes: total, results: [] }),
+      },
+      '../services/websocketService': {
+        // Captura los eventos para ejercitar la sincronizacion real de la vista.
+        connectToPoll: (...args) => { callbacks = args; return { close() { closed++ } } },
+      },
+    }, {
+      // Conserva la limpieza registrada por Vue para simular el cambio de pagina.
+      captureUnmount: callback => { unmount = callback },
+    })
+    await (filename === 'PollView.vue' ? view.loadPoll() : view.loadAdminPanel())
+    if (view.selectedOptionIds) view.selectedOptionIds.value = ['b']
+    callbacks[3]('disconnected')
+    current = { ...poll, is_active: false }; total = 3
+    await callbacks[4](() => true)
+    callbacks[3]('connected')
+    assert.equal(view.poll.value.is_active, false)
+    assert.equal(view.results.value.total_votes, 3)
+    if (view.selectedOptionIds) assert.deepEqual(Array.from(view.selectedOptionIds.value), ['b'])
+    current = { ...poll, is_active: true }; total = 4
+    await callbacks[4](() => false)
+    assert.equal(view.poll.value.is_active, false)
+    await callbacks[4](() => true)
+    assert.equal(view.poll.value.is_active, true)
+    assert.equal(view.results.value.total_votes, 4)
+    unmount()
+    assert.equal(closed, 1)
+    total = 99
+    await callbacks[4](() => true)
+    callbacks[1]({ total_votes: 99 })
+    callbacks[2](false)
+    assert.equal(view.results.value.total_votes, 4)
+    assert.equal(view.poll.value.is_active, true)
+  })
+}
