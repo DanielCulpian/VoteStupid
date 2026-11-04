@@ -128,6 +128,37 @@ def test_get_admin_poll_returns_200_when_admin_token_is_valid(db_session):
         app.dependency_overrides.clear()
 
 
+def test_get_admin_poll_returns_403_when_admin_token_is_invalid(db_session):
+    """Comprueba que un token incorrecto impide consultar los datos de administración."""
+    repository = SqlAlchemyPollRepository(db_session)
+    app.dependency_overrides[get_poll_repository] = lambda: repository
+
+    payload = {
+        "title": "Votación protegida",
+        "option_texts": ["Opción A", "Opción B"],
+        "poll_type": "single_choice",
+    }
+
+    try:
+        with TestClient(app) as client:
+            # Arrange: creamos una votación con un token privado real.
+            creation_response = client.post("/api/polls", json=payload)
+            assert creation_response.status_code == 201
+            created_poll = creation_response.json()
+
+            # Act: enviamos un token distinto al generado para esta votación.
+            response = client.get(
+                f"/api/admin/polls/{created_poll['id']}",
+                headers={"X-Admin-Token": created_poll["admin_token"] + "-incorrecto"},
+            )
+
+        # Assert: solo se devuelve el error, sin datos de la votación ni secretos.
+        assert response.status_code == 403
+        assert response.json() == {"detail": "Token de administrador inválido."}
+    finally:
+        app.dependency_overrides.clear()
+
+
 def test_create_poll_returns_422_when_title_is_empty(db_session):
     """Comprueba que la creación de votaciones responde con HTTP 422 cuando el título está vacío."""
     repository = SqlAlchemyPollRepository(db_session)
