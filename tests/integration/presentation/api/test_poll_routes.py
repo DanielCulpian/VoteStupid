@@ -88,6 +88,46 @@ def test_create_poll_returns_201_when_data_is_valid(db_session):
     finally:
         app.dependency_overrides.clear()
 
+def test_get_admin_poll_returns_200_when_admin_token_is_valid(db_session):
+    """Comprueba que el token privado permite consultar la votación sin revelar secretos."""
+    repository = SqlAlchemyPollRepository(db_session)
+    app.dependency_overrides[get_poll_repository] = lambda: repository
+
+    payload = {
+        "title": "Votación administrada",
+        "description": "Prueba de acceso al panel de administración.",
+        "option_texts": ["Opción A", "Opción B"],
+        "poll_type": "single_choice",
+    }
+
+    try:
+        with TestClient(app) as client:
+            # Arrange: creamos una votación y obtenemos su token privado real.
+            creation_response = client.post("/api/polls", json=payload)
+            assert creation_response.status_code == 201
+            created_poll = creation_response.json()
+
+            # Act: consultamos la administración con el token de esa votación.
+            response = client.get(
+                f"/api/admin/polls/{created_poll['id']}",
+                headers={"X-Admin-Token": created_poll["admin_token"]},
+            )
+
+        # Assert: recibimos los datos guardados, sin el token ni su hash.
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == created_poll["id"]
+        assert data["title"] == payload["title"]
+        assert data["description"] == payload["description"]
+        assert data["poll_type"] == payload["poll_type"]
+        assert data["options"] == created_poll["options"]
+        assert data["is_active"] is True
+        assert "admin_token" not in data
+        assert "admin_token_hash" not in data
+    finally:
+        app.dependency_overrides.clear()
+
+
 def test_create_poll_returns_422_when_title_is_empty(db_session):
     """Comprueba que la creación de votaciones responde con HTTP 422 cuando el título está vacío."""
     repository = SqlAlchemyPollRepository(db_session)
