@@ -9,6 +9,7 @@ import { getPollResults } from '../services/resultsService'
 import { connectToPoll, type RealtimeConnectionState } from '../services/websocketService'
 import RealtimeNotice from '../components/RealtimeNotice.vue'
 import LiveAnnouncer from '../components/LiveAnnouncer.vue'
+import { rememberPoll } from '../services/historyService'
 
 const route = useRoute()
 const pollId = String(route.params.id)
@@ -28,6 +29,18 @@ const resultsError = ref('')
 const connectionState = ref<RealtimeConnectionState>('connecting')
 const errorMessage = ref('')
 const successMessage = ref('')
+const historyWarning = ref('')
+
+// Recuerda solo los metadatos de una votación cuyo acceso administrativo ya se ha validado.
+function rememberCurrentPoll() {
+  if (!poll.value || isDisposed) return
+  historyWarning.value = ''
+  try {
+    rememberPoll(poll.value)
+  } catch (error) {
+    historyWarning.value = error instanceof Error ? error.message : 'No se ha podido actualizar el histórico local.'
+  }
+}
 
 // Carga los resultados por separado para que un fallo no oculte la administración.
 async function loadResults() {
@@ -63,6 +76,7 @@ function connectLive() {
             successMessage.value = ''
           }
           poll.value.is_active = isActive
+          rememberCurrentPoll()
         }
       },
       // Informa de la conexión o desconexión del WebSocket actual.
@@ -110,6 +124,7 @@ async function loadAdminPanel() {
 
     poll.value = await getAdminPoll(pollId, savedToken)
     if (isDisposed) return
+    rememberCurrentPoll()
     connectLive()
     await loadResults()
   } catch (error) {
@@ -140,6 +155,7 @@ async function updatePollStatus() {
       successMessage.value = 'La votación se ha reabierto.'
     }
 
+    rememberCurrentPoll()
     await loadResults()
   } catch (error) {
     errorMessage.value =
@@ -185,6 +201,7 @@ onUnmounted(() => {
     <LiveAnnouncer :message="isUpdating ? 'Guardando el estado de la votación.' : successMessage" />
     <nav class="header" aria-label="Navegación principal">
       <RouterLink class="logo" to="/">VoteStupid<span>!</span></RouterLink>
+      <RouterLink class="history-nav" to="/historial">Histórico</RouterLink>
     </nav>
     <header>
       <h1 id="page-title" tabindex="-1">Panel de administración</h1>
@@ -199,6 +216,7 @@ onUnmounted(() => {
     </section>
 
     <template v-else-if="poll">
+      <p v-if="historyWarning" class="warning-message" role="alert">{{ historyWarning }}</p>
       <RealtimeNotice :state="connectionState" :busy="isUpdating || isLoading" @reconnect="loadAdminPanel" />
       <p v-if="errorMessage" class="error-message" role="alert">{{ errorMessage }}</p>
       <section class="admin-card">

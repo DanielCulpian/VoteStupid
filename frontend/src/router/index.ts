@@ -4,6 +4,7 @@ import HomeView from '../views/HomeView.vue'
 import CreatePollView from '../views/CreatePollView.vue'
 import AdminView from '../views/AdminView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
+import HistoryView from '../views/HistoryView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -31,6 +32,12 @@ const router = createRouter({
       name: 'admin',
       meta: { title: 'Administración' },
       component: AdminView,
+    },
+    {
+      path: '/historial',
+      name: 'history',
+      meta: { title: 'Histórico de votaciones' },
+      component: HistoryView,
     },
     {
       path: '/:pathMatch(.*)*',

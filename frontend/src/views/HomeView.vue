@@ -5,6 +5,7 @@
   <main id="main-content" class="home" tabindex="-1">
     <header class="header">
       <a class="logo" href="/">VoteStupid<span>!</span></a>
+      <RouterLink class="history-nav" to="/historial">Histórico</RouterLink>
 
       <span class="tagline">Las decisiones importantes...</span>
     </header>

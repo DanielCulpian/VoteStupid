@@ -2,6 +2,7 @@
 import { nextTick, ref } from 'vue'
 import LiveAnnouncer from '../components/LiveAnnouncer.vue'
 import { createPoll } from '../services/pollService'
+import { rememberPoll } from '../services/historyService'
 import type {
   PollType,
   PollCreatedResponse,
@@ -20,6 +21,7 @@ const errorMessage = ref('')
 const createdPoll = ref<PollCreatedResponse | null>(null)
 const invalidField = ref('')
 const formAnnouncement = ref('')
+const historyWarning = ref('')
 
 // Anuncia el error de validación y lleva el foco al campo que necesita corrección.
 async function showValidationError(message: string, fieldId: string) {
@@ -52,6 +54,7 @@ async function submitPoll() {
   if (isSubmitting.value) return
   errorMessage.value = ''
   invalidField.value = ''
+  historyWarning.value = ''
   createdPoll.value = null
 
   const cleanedOptions = options.value.map(option => option.trim())
@@ -105,6 +108,16 @@ async function submitPoll() {
 
     adminUrl.value =
       `${window.location.origin}/admin/${poll.id}#token=${encodeURIComponent(poll.admin_token)}`
+    try {
+      rememberPoll(poll)
+    } catch (error) {
+      historyWarning.value = error instanceof Error ? error.message : 'No se ha podido guardar el histórico. Guarda los enlaces de tu votación.'
+    }
+    try {
+      sessionStorage.setItem(`votestupid:admin-token:${poll.id}`, poll.admin_token)
+    } catch {
+      historyWarning.value += ' No se puede conservar el acceso de administración en esta sesión. Guarda y utiliza el enlace privado.'
+    }
     await nextTick()
     document.getElementById('creation-success')?.focus()
   } catch (error) {
@@ -125,6 +138,7 @@ async function submitPoll() {
       <RouterLink class="logo" to="/">
         VoteStupid<span>!</span>
       </RouterLink>
+      <RouterLink class="history-nav" to="/historial">Histórico</RouterLink>
     </header>
 
     <section class="form-container">
@@ -134,6 +148,7 @@ async function submitPoll() {
       <div v-if="createdPoll" class="success-message">
         <h2 id="creation-success" tabindex="-1">¡Votación creada!</h2>
         <p>Tu votación se ha guardado correctamente.</p>
+        <p v-if="historyWarning" class="warning-message" role="alert">{{ historyWarning }}</p>
 
         <div class="created-link">
           <h3>Enlace para los participantes</h3>
@@ -153,6 +168,7 @@ async function submitPoll() {
             tu votación.
           </p>
         </div>
+        <RouterLink class="history-nav" to="/historial">Ver mis votaciones anteriores</RouterLink>
       </div>
 
       <form

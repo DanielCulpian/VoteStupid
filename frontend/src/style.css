@@ -465,6 +465,67 @@ h1 span {
   overflow-wrap: anywhere;
 }
 
+.history-nav {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 8px 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.history-container {
+  max-width: 800px;
+}
+
+.history-list {
+  padding: 0;
+  list-style: none;
+}
+
+.history-card h2 {
+  margin-top: 0;
+  line-height: 1.4;
+}
+
+.history-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 16px;
+}
+
+.history-details dt {
+  color: #626262;
+  font-size: 14px;
+}
+
+.history-details dd {
+  margin: 6px 0 0;
+}
+
+.history-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 24px 0 16px;
+}
+
+.history-actions a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  text-decoration: none;
+}
+
+.history-refresh {
+  margin-top: 24px;
+}
+
+.history-empty {
+  margin: 32px 0;
+  line-height: 1.6;
+}
+
 
 .admin-page {
   width: min(700px, 92%);

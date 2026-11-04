@@ -32,6 +32,10 @@ function loadView(filename, services = {}, globals = {}) {
       }
       if (name.endsWith('.vue')) return { default: {} }
       if (name in services) return services[name]
+      if (name === '../services/historyService') return {
+        // Aísla las pruebas existentes de formulario y administración del almacenamiento del histórico.
+        rememberPoll() {},
+      }
       throw new Error(`Servicio no configurado en la prueba: ${name}`)
     },
     localStorage: {
