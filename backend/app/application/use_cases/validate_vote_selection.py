@@ -1,3 +1,4 @@
+from app.domain.vote_rule_error import VoteRuleError
 from uuid import UUID
 
 from app.domain.entities.poll import Poll
@@ -20,11 +21,11 @@ class ValidateVoteSelection:
 
         # 1. Comprobar que se ha seleccionado alguna opción
         if not selected_option_ids:
-            raise ValueError("Debes seleccionar al menos una opción.")
+            raise VoteRuleError("Debes seleccionar al menos una opción.")
 
         # 2. Comprobar que no hay opciones duplicadas
         if len(selected_option_ids) != len(set(selected_option_ids)):
-            raise ValueError("No puedes seleccionar una opción varias veces.")
+            raise VoteRuleError("No puedes seleccionar una opción varias veces.")
 
         # 3. Comprobar que las opciones pertenecen a la votación
         valid_option_ids = self.poll_repository.get_options_by_ids(
@@ -33,14 +34,14 @@ class ValidateVoteSelection:
         )
 
         if set(valid_option_ids) != set(selected_option_ids):
-            raise ValueError(
+            raise VoteRuleError(
                 "Una o varias opciones no pertenecen a esta votación."
             )
 
         # 4. Validar según el tipo de votación
         if poll.poll_type == PollType.SINGLE_CHOICE:
             if len(selected_option_ids) != 1:
-                raise ValueError(
+                raise VoteRuleError(
                     "En una votación de elección única debes seleccionar "
                     "exactamente una opción."
                 )
@@ -50,12 +51,12 @@ class ValidateVoteSelection:
                 poll.max_selections is not None
                 and len(selected_option_ids) > poll.max_selections
             ):
-                raise ValueError(
+                raise VoteRuleError(
                     f"No puedes seleccionar más de {poll.max_selections} opciones."
                 )
 
         elif poll.poll_type == PollType.RANKING:
             if len(selected_option_ids) != len(poll.options):
-                raise ValueError(
+                raise VoteRuleError(
                     "En una votación de ranking debes ordenar todas las opciones."
                 )

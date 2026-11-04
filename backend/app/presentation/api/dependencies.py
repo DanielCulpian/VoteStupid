@@ -63,7 +63,7 @@ def get_poll_results_use_case(
 
 def get_admin_poll(
     poll_id: UUID,
-    x_admin_token: str = Header(..., alias="X-Admin-Token"),
+    x_admin_token: str = Header(..., alias="X-Admin-Token", min_length=1, max_length=256, pattern=r"^[A-Za-z0-9_-]+$"),
     poll_repository: SqlAlchemyPollRepository = Depends(get_poll_repository),
 ) -> Poll:
     """Obtiene la votación y comprueba el token privado de administración."""

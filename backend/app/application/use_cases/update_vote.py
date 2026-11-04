@@ -1,3 +1,4 @@
+from app.domain.vote_rule_error import VoteRuleError
 
 from uuid import UUID
 from datetime import datetime, timezone
@@ -32,18 +33,18 @@ class UpdateVote:
         poll = self.poll_repository.get_by_id(poll_id)
 
         if poll is None:
-            raise ValueError("La votación no existe.")
+            raise VoteRuleError("La votación no existe.")
 
         # 2. Comprobar que está abierta
         if not poll.is_active:
-            raise ValueError("La votación está cerrada.")
+            raise VoteRuleError("La votación está cerrada.")
 
         # 3. Comprobar la fecha límite
         if (
             poll.closes_at is not None
             and datetime.now(timezone.utc) >= poll.closes_at
         ):
-            raise ValueError("La votación ha alcanzado su fecha de cierre.")
+            raise VoteRuleError("La votación ha alcanzado su fecha de cierre.")
 
         # 4. Buscar el voto existente
         existing_vote = self.poll_repository.get_vote_by_voter(
@@ -52,7 +53,7 @@ class UpdateVote:
         )
 
         if existing_vote is None:
-            raise ValueError("Este participante todavía no ha votado.")
+            raise VoteRuleError("Este participante todavía no ha votado.")
 
         # 5. Validar la nueva selección
         self.validate_vote_selection.execute(

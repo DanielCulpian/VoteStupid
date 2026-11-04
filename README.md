@@ -28,3 +28,10 @@ Desde la raíz, con el entorno virtual activado, configura `PYTHONPATH=backend` 
 ejecuta `python -m pytest -v`. Las pruebas de integración usan `votestupid_test`.
 Desde `frontend/`, ejecuta `npm test` y `npm run build` para comprobar la lógica y
 compilar la aplicación.
+
+## Seguridad de la API
+
+La API limita entradas, tamaño de peticiones y tráfico por IP, protege los errores
+y evita cachear respuestas. Consulta [límites, tokens, CORS y configuración futura
+de Nginx y Cloudflare Tunnel](docs/api-security.md). No requiere servicios externos
+ni cuentas. El despliegue actual debe utilizar un único worker.

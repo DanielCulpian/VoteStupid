@@ -15,6 +15,15 @@ from app.infrastructure.models.vote_model import VoteModel
 from app.infrastructure.models.vote_selection_model import VoteSelectionModel
 
 
+@pytest.fixture(autouse=True)
+def isolate_api_limits():
+    """Aísla los cupos entre pruebas sin desactivar la protección de la aplicación."""
+    from app.main import app
+    app.state.rate_limiter.clear()
+    yield
+    app.state.rate_limiter.clear()
+
+
 @pytest.fixture(scope="session")
 def test_engine():
     """Prepara el motor de votestupid_test y crea y elimina las tablas de la sesión de pruebas."""

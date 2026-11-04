@@ -1,17 +1,19 @@
 from datetime import datetime
 from uuid import UUID
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
 
 from app.domain.entities.poll_type import PollType
 
 
 class CreatePollRequest(BaseModel):
-    title: str
-    option_texts: list[str] = Field(min_length=2)
+    model_config = ConfigDict(extra="forbid")
+    title: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=255)]
+    option_texts: list[Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=255)]] = Field(min_length=2, max_length=50)
     poll_type: PollType
-    description: str | None = None
-    max_selections: int | None = Field(default=None, ge=1)
+    description: Annotated[str, StringConstraints(strip_whitespace=True, max_length=5000)] | None = None
+    max_selections: int | None = Field(default=None, ge=1, le=50, strict=True)
     closes_at: datetime | None = None
 
     @field_validator("title")
@@ -89,11 +91,13 @@ class PollCreatedResponse(PollResponse):
     admin_token: str
 
 class CastVoteRequest(BaseModel):
-    selected_option_ids: list[UUID] = Field(min_length=1)
+    model_config = ConfigDict(extra="forbid")
+    selected_option_ids: list[UUID] = Field(min_length=1, max_length=50)
 
 
 class UpdateVoteRequest(BaseModel):
-    selected_option_ids: list[UUID] = Field(min_length=1)
+    model_config = ConfigDict(extra="forbid")
+    selected_option_ids: list[UUID] = Field(min_length=1, max_length=50)
 
 
 class VoteResponse(BaseModel):

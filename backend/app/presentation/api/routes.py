@@ -1,4 +1,5 @@
-﻿from fastapi import (
+from app.domain.vote_rule_error import VoteRuleError
+from fastapi import (
     APIRouter,
     Depends,
     status,
@@ -150,6 +151,7 @@ async def cast_vote(
         alias="X-Voter-Token",
         min_length=32,
         max_length=256,
+        pattern=r"^[A-Za-z0-9_-]+$",
     ),
     use_case: CastVote = Depends(get_cast_vote_use_case),
     results_use_case: GetPollResults = Depends(get_poll_results_use_case),
@@ -163,7 +165,7 @@ async def cast_vote(
             voter_token_hash=voter_token_hash,
             selected_option_ids=request.selected_option_ids,
         )
-    except ValueError as error:
+    except VoteRuleError as error:
         message = str(error)
 
         if "no existe" in message:
@@ -227,6 +229,7 @@ async def update_vote(
         alias="X-Voter-Token",
         min_length=32,
         max_length=256,
+        pattern=r"^[A-Za-z0-9_-]+$",
     ),
     use_case: UpdateVote = Depends(get_update_vote_use_case),
     results_use_case: GetPollResults = Depends(get_poll_results_use_case),
@@ -240,7 +243,7 @@ async def update_vote(
             voter_token_hash=voter_token_hash,
             selected_option_ids=request.selected_option_ids,
         )
-    except ValueError as error:
+    except VoteRuleError as error:
         message = str(error)
 
         if "no existe" in message or "todavía no ha votado" in message:
@@ -333,9 +336,16 @@ async def poll_updates(
 
     try:
         while True:
-            await websocket.receive_text()
+            message = await websocket.receive()
+            if message["type"] == "websocket.disconnect":
+                break
+            # El canal solo publica eventos; no admite mensajes de escritura del cliente.
+            await websocket.close(code=1008)
+            break
 
     except WebSocketDisconnect:
+        pass
+    finally:
         connection_manager.disconnect(poll_id, websocket)
 
 @router.put("/api/admin/polls/{poll_id}/close", response_model=PollResponse)
