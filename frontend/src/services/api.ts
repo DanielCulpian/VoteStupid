@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL
+const API_URL = import.meta.env.VITE_API_URL ?? ''
 const REQUEST_TIMEOUT_MS = 15000
 
 // Conserva el código HTTP para distinguir errores de acceso, validación y servidor.

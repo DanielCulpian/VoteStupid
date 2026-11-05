@@ -16,7 +16,7 @@ database_url = os.getenv("DATABASE_URL")
 if not database_url:
     raise RuntimeError("La variable DATABASE_URL no está configurada.")
 
-config.set_main_option("sqlalchemy.url", database_url)
+config.set_main_option("sqlalchemy.url", database_url.replace("%", "%%"))
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

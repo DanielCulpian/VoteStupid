@@ -4,9 +4,9 @@ const vm = require('node:vm')
 const ts = require('typescript')
 
 // Carga el servicio real con una URL de prueba y dependencias controladas, sin navegador ni servidor.
-function loadService(filename, globals = {}) {
+function loadService(filename, globals = {}, apiUrl = 'http://127.0.0.1:8000') {
   const source = fs.readFileSync(path.join(__dirname, '../../src/services', filename), 'utf8')
-    .replaceAll('import.meta.env.VITE_API_URL', JSON.stringify('http://127.0.0.1:8000'))
+    .replaceAll('import.meta.env.VITE_API_URL', JSON.stringify(apiUrl))
   const { outputText } = ts.transpileModule(source, {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   })

@@ -2,6 +2,25 @@ const assert = require('node:assert/strict')
 const { test } = require('node:test')
 const { loadService } = require('./helpers/loadService.cjs')
 
+// Construye el WebSocket con el mismo origen HTTPS cuando se sirve detrás de Nginx.
+test('usa el origen público y wss cuando no hay URL de API configurada', () => {
+  let destination
+  const { connectToPoll } = loadService('websocketService.ts', {
+    window: { location: { origin: 'https://votes.example' } },
+    WebSocket: class {
+      // Recoge la dirección sin abrir una conexión de red.
+      constructor(url) { destination = url }
+      // Sustituye el transporte para comprobar únicamente la dirección generada.
+      addEventListener() {}
+      // Permite cerrar el intento y cancelar su temporizador.
+      close() {}
+    },
+  }, '')
+  const connection = connectToPoll('poll-1', () => {})
+  assert.equal(destination, 'wss://votes.example/api/polls/poll-1/ws')
+  connection.close()
+})
+
 // Simula el transporte con eventos independientes de la red.
 class FakeWebSocket extends EventTarget {
   static CONNECTING = 0

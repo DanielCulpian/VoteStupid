@@ -1,75 +1,83 @@
 # VoteStupid
 
-Plataforma de votaciones an?nimas de elecci?n ?nica, m?ltiple y ranking.
-Backend FastAPI y PostgreSQL, frontend Vue 3 con TypeScript y resultados por WebSocket.
+Plataforma de votaciones anónimas de elección única, múltiple y ranking.
+FastAPI, SQLAlchemy y PostgreSQL; Vue 3 y TypeScript; resultados y estado por WebSocket.
 
-## Participar y administrar
+## Ejecutar con Docker en Windows
 
-`/` conserva la presentaci?n de VoteStupid e incorpora el cat?logo p?blico.
-`/votaciones` permite filtrar por estado y tipo, combinar filtros y consultar
-resultados. Las votaciones disponibles aparecen primero y las m?s recientes
-encabezan cada grupo. `/historial` redirige al cat?logo.
-
-La creaci?n y administraci?n requieren iniciar sesi?n en `/acceso`.
-Desde `/admin` se pueden crear, consultar, cerrar y reabrir votaciones anteriores,
-sin conservar manualmente un enlace secreto. La API comprueba la sesi?n incluso
-en peticiones directas. Los participantes siguen votando sin cuentas.
-
-## Desarrollo local
-
-Instala las dependencias Python del proyecto en un entorno virtual y configura
-el `.env` privado a partir de `.env.example`, incluyendo las conexiones PostgreSQL.
-Desde la ra?z, con ese entorno activado:
+Con Docker Desktop iniciado y el `.env` privado configurado:
 
 ```powershell
-docker compose up -d db
-alembic upgrade head
+.\scripts\docker.ps1 start
+```
+
+Abre **http://localhost:8080**. Para administrar, entra en **/acceso**.
+La portada conserva la presentación y el catálogo público con filtros por estado
+y tipo. Crear, cerrar y reabrir votaciones requiere sesión administrativa.
+
+```powershell
+.\scripts\docker.ps1 status
+.\scripts\docker.ps1 logs
+.\scripts\docker.ps1 stop
+```
+
+El apagado conserva las votaciones, votos y sesiones en el volumen externo
+`votestupid_postgres_data`. Nginx es el único punto de acceso; PostgreSQL y
+FastAPI no publican puertos. Las migraciones se aplican antes de arrancar la API.
+
+Consulta [configuración, persistencia y resolución de problemas](docs/docker-local.md).
+Nunca elimines el volumen ni ejecutes `docker compose down -v`.
+
+## Configurar la administración
+
+Con el entorno Python activado, desde la raíz:
+
+```powershell
 python scripts/configure_admin.py --write-env --local-http
-$env:PYTHONPATH = "backend"
+```
+
+Solicita una contraseña de 16–256 caracteres y guarda únicamente su hash scrypt
+en el `.env` privado. No hay contraseña predeterminada. `--local-http` permite
+cookies sin Secure para HTTP local; omítelo con HTTPS. Recrea el backend después
+de cambiar la configuración: `docker compose up -d --wait`.
+
+Las cookies son HttpOnly y SameSite Strict; las sesiones duran ocho horas y se
+persisten mediante hash. La sesión permite recuperar votaciones anteriores sin
+conservar enlaces secretos. Los participantes no necesitan cuentas. Los tokens
+individuales antiguos también requieren sesión; el frontend no guarda nuevos
+tokens administrativos en almacenamiento local.
+
+## Desarrollo y pruebas
+
+Instala las dependencias Python con `python -m pip install -r requirements.txt`;
+para ejecutar las pruebas añade `python -m pip install pytest httpx`.
+Configura `DATABASE_URL` en el `.env` privado para desarrollo desde el host.
+Publica PostgreSQL solo en loopback con el archivo opcional:
+
+```powershell
+docker compose -f compose.yaml -f compose.dev.yaml up -d db
+$env:PYTHONPATH = 'backend'
+alembic upgrade head
+python -m pytest -v
 python -m uvicorn app.main:app --app-dir backend --reload
 ```
 
-El configurador solicita una contrase?a de 16?256 caracteres y guarda ?nicamente
-su hash. No existe una contrase?a predeterminada. Reinicia el backend despu?s
-de cambiarla; las sesiones anteriores dejar?n de ser v?lidas.
+Las pruebas de integración requieren `votestupid_test` y crean y eliminan tablas
+exclusivamente en esa base. El arranque Docker normal retira el puerto opcional.
 
 Desde `frontend/`:
 
 ```powershell
 npm ci
+npm test
+npm run build
 npm run dev
 ```
 
-Usa `http://localhost:5173` y `VITE_API_URL=http://localhost:8000`, como indica
-`frontend/.env.example`. Mant?n el mismo hostname en frontend y API para que
-funcionen las cookies SameSite; no mezcles `localhost` y `127.0.0.1`.
+Para Vite usa `http://localhost:5173` y `VITE_API_URL=http://localhost:8000`;
+declara ese origen en `CORS_ALLOWED_ORIGINS`. No mezcles `localhost` y `127.0.0.1`
+al usar cookies SameSite. Docker usa `DOCKER_PUBLIC_ORIGIN` y el mismo origen para
+API y frontend, sin necesitar Vite ni Python instalados en el host.
 
-## Persistencia y seguridad
-
-PostgreSQL conserva votaciones, votos y sesiones. El volumen `postgres_data`
-persiste al detener y arrancar el contenedor; no uses `docker compose down -v`
-si deseas conservar los datos. El cat?logo administrativo ya no depende del
-almacenamiento local del navegador.
-
-Las sesiones duran ocho horas y usan cookies HttpOnly, SameSite Strict y Secure
-por defecto. `--local-http` permite HTTP ?nicamente para desarrollo. En producci?n
-configura HTTPS y `ADMIN_COOKIE_SECURE=true`; no publiques el `.env`.
-Los tokens individuales existentes siguen valid?ndose si se env?an, pero tambi?n
-requieren sesi?n administrativa. El frontend no almacena nuevos tokens de administrador.
-
-Consulta [la gu?a de seguridad](docs/api-security.md) para l?mites, CORS y proxies.
-El despliegue actual requiere un ?nico worker y no utiliza servicios externos de pago.
-
-## Comprobaciones
-
-Desde la ra?z, con el entorno virtual activado:
-
-```powershell
-$env:PYTHONPATH = "backend"
-python -m pytest -v
-```
-
-Las pruebas de integraci?n necesitan la base `votestupid_test`; sus fixtures
-crean y eliminan tablas exclusivamente en ella. Desde `frontend/`, ejecuta
-`npm test` y `npm run build`. Comprueba adem?s los filtros, el acceso privado y
-los eventos en directo desde navegador; consulta el [seguimiento](docs/public-hall-checkpoint.md).
+Consulta [la guía de seguridad](docs/api-security.md). No publiques archivos de
+entorno, copias SQL ni credenciales. El despliegue actual utiliza un único worker.
