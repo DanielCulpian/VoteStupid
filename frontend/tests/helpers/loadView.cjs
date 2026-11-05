@@ -17,12 +17,14 @@ function loadView(filename, services = {}, globals = {}) {
   const exports = {}
   vm.runInNewContext(outputText, {
     exports,
+    setTimeout,
+    clearTimeout,
     // Resuelve Vue y los servicios explícitos de la prueba sin peticiones externas.
     require: name => {
       if (name === 'vue') return {
         ...vue,
         // El montaje y desmontaje se ejercitan explícitamente desde cada prueba.
-        onMounted() {},
+        onMounted(callback) { globals.captureMount?.(callback) },
         // Evita registrar un ciclo de vida real cuando solo se prueba la lógica.
         onUnmounted(callback) { globals.captureUnmount?.(callback) },
       }
@@ -32,10 +34,6 @@ function loadView(filename, services = {}, globals = {}) {
       }
       if (name.endsWith('.vue')) return { default: {} }
       if (name in services) return services[name]
-      if (name === '../services/historyService') return {
-        // Aísla las pruebas existentes de formulario y administración del almacenamiento del histórico.
-        rememberPoll() {},
-      }
       throw new Error(`Servicio no configurado en la prueba: ${name}`)
     },
     localStorage: {
@@ -66,7 +64,7 @@ function loadView(filename, services = {}, globals = {}) {
     ...globals,
   }, { filename })
   // Recoge las referencias y acciones expuestas por script setup para comprobar su comportamiento.
-  return exports.default.setup({}, { expose() {} })
+  return exports.default.setup(globals.props ?? {}, { expose() {} })
 }
 
 // Crea una promesa cuyo resultado controla la prueba para simular una petición lenta.

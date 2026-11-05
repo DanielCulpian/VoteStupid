@@ -52,7 +52,8 @@ function responseMessage(status: number, data: unknown): string {
     if (typeof detail === 'string' && detail.includes('todavía no ha votado')) return detail
     return 'No se ha encontrado la votación. Comprueba el enlace o pide uno nuevo a quien la creó.'
   }
-  if (status === 403 || status === 401) return 'El acceso de administración no es válido para esta votación. Abre su enlace privado completo.'
+  if (status === 401) return 'Tu sesión no está disponible o ha caducado. Inicia sesión para continuar.'
+  if (status === 403) return 'No tienes autorización para realizar esta operación. Vuelve a acceder a la zona privada.'
   if (status === 422) return validationMessage(detail)
   if (status === 429) return 'Se han enviado demasiadas peticiones. Espera unos instantes antes de volver a intentarlo.'
   if (typeof detail === 'string' && detail.trim()) return detail
@@ -86,7 +87,12 @@ export async function apiRequest<T>(
       if (response.status === 401 && endpoint !== '/api/admin/auth/login' && typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
         window.dispatchEvent(new Event('admin-session-expired'))
       }
-      throw new ApiError(responseMessage(response.status, data), response.status)
+      const message = endpoint === '/api/admin/auth/login' && response.status === 401
+        ? 'La contraseña no es correcta. Vuelve a intentarlo.'
+        : endpoint === '/api/admin/auth/login' && response.status === 503
+          ? 'El acceso privado no está configurado. Contacta con el administrador.'
+          : responseMessage(response.status, data)
+      throw new ApiError(message, response.status)
     }
     if (data === null) throw new ApiError('El servidor ha devuelto una respuesta inesperada. Vuelve a intentarlo.', response.status)
     return data as T

@@ -1,4 +1,5 @@
 from uuid import UUID
+from datetime import datetime, timezone
 
 from app.domain.entities.poll import Poll
 from app.domain.repositories.poll_repository import PollRepository
@@ -22,6 +23,9 @@ class ReopenPoll:
 
         # 3. Reabrir la votación
         poll.is_active = True
+        # Una reapertura explícita retira un plazo ya vencido para permitir votar otra vez.
+        if poll.closes_at is not None and poll.closes_at <= datetime.now(timezone.utc):
+            poll.closes_at = None
 
         # 4. Guardar los cambios
         self.poll_repository.update_poll(poll)

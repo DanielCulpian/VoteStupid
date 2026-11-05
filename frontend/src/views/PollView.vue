@@ -7,7 +7,7 @@ import {
   type PollResults,
 } from '../services/resultsService'
 import type { PollResponse } from '../types/poll'
-import { nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { connectToPoll, type RealtimeConnectionState, type PollConnection } from '../services/websocketService'
 import RealtimeNotice from '../components/RealtimeNotice.vue'
 import LiveAnnouncer from '../components/LiveAnnouncer.vue'
@@ -36,6 +36,22 @@ const hasVoted = ref(false)
 let socket: PollConnection | null = null
 let connectionVersion = 0
 let isDisposed = false
+let deadlineTimer: ReturnType<typeof setTimeout> | undefined
+
+// Bloquea los controles al vencer el plazo aunque no se reciba un nuevo evento del servidor.
+function scheduleDeadline() {
+  clearTimeout(deadlineTimer)
+  if (!poll.value?.is_active || !poll.value.closes_at || isDisposed) return
+  const remaining = Date.parse(poll.value.closes_at) - Date.now()
+  if (remaining <= 0) {
+    poll.value.is_active = false
+    statusAnnouncement.value = 'La votación ha alcanzado su fecha de cierre.'
+  } else {
+    deadlineTimer = setTimeout(scheduleDeadline, Math.min(remaining, 2147483647))
+  }
+}
+
+const stopDeadline = watch(() => poll.value?.closes_at, scheduleDeadline)
 
 // Guarda las opciones del voto en el navegador para recuperarlas al volver a la votación.
 function saveVoteLocally(optionIds: string[]) {
@@ -308,6 +324,8 @@ async function submitVote() {
 // Cierra el WebSocket al abandonar la vista para liberar la conexión.
 onUnmounted(() => {
   isDisposed = true
+  stopDeadline()
+  clearTimeout(deadlineTimer)
   connectionVersion++
   socket?.close()
 })

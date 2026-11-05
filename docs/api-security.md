@@ -17,6 +17,7 @@ votaciones e independiente del token. Los intentos inválidos también cuentan.
 
 | Operación | Peticiones por minuto e IP |
 | --- | ---: |
+| Intentos de inicio de sesión | 5 |
 | Creación de votaciones | 10 |
 | Registro y modificación de votos, conjuntamente | 30 |
 | Todas las operaciones administrativas, conjuntamente | 30 |
@@ -34,12 +35,31 @@ acotados a 10.000 claves y se reinician con el proceso. Si se llena ese registro
 se rechazan claves nuevas temporalmente, sin expulsar las que protegen un cupo.
 Las personas que comparten IP también comparten límites.
 
+El inicio de sesión tiene además un límite global de 20 intentos por minuto
+por proceso para acotar el trabajo de verificación de contraseñas.
+
 Este mecanismo está pensado para **un único worker**. Con varios procesos cada
 uno tendría su cupo y su registro WebSocket. Antes de escalar, centralizar ambos
 registros o aplicar límites coordinados en Nginx; no se ha añadido Redis ni un
 servicio externo. Estos límites no sustituyen la protección volumétrica del proxy.
 
 ## Tokens, errores y caché
+
+Crear y administrar votaciones exige una sesión global de administrador, también
+cuando se proporciona un token individual. Las rutas públicas de catálogo,
+participación y resultados no devuelven credenciales administrativas.
+
+`ADMIN_PASSWORD_HASH` contiene un hash scrypt; no hay contraseña predeterminada.
+Configúrala con `python scripts/configure_admin.py --write-env` y reinicia el
+backend. Para desarrollo HTTP local añade `--local-http`; en producción conserva
+`ADMIN_COOKIE_SECURE=true` y utiliza HTTPS. El `.env` debe permanecer privado.
+
+Las sesiones duran ocho horas, se guardan mediante hash en PostgreSQL y usan
+cookies HttpOnly, SameSite Strict y Secure por defecto, limitadas a `/api`.
+Cerrar sesión revoca el registro; cambiar la contraseña invalida las sesiones
+anteriores. Las operaciones administrativas de escritura exigen la cabecera
+`X-Requested-With: VoteStupid` y comprueban el origen cuando está presente.
+Frontend y API deben compartir el hostname para las cookies SameSite.
 
 El token administrativo original solo se devuelve en la creación y se utiliza
 mediante `X-Admin-Token`; el del participante usa `X-Voter-Token`. Se almacenan
@@ -52,8 +72,10 @@ de cuerpos, cabeceras de autenticación o parámetros SQL en producción.
 Las respuestas llevan `Cache-Control: no-store`. Configurar además Cloudflare y
 Nginx para no cachear `/api/`; las reglas de caché del proxy no deben anularlo.
 No registrar `X-Admin-Token`, `X-Voter-Token`, cuerpos ni `$request_uri` con query.
-El enlace privado del frontend lleva el secreto en el fragmento `#token=`, que
-el navegador no envía al servidor. No usar `?token=` ni ponerlo en rutas.
+Los enlaces privados antiguos pueden llevar el secreto en el fragmento `#token=`,
+que el navegador no envía al servidor. La vista administrativa lo retira de la
+dirección al leerlo y no lo persiste. Los enlaces nuevos de administración dependen
+de la sesión y no incluyen tokens. No usar `?token=` ni poner secretos en rutas.
 
 ## CORS y proxies de confianza
 

@@ -1,63 +1,77 @@
-# Hall público y administración privada — punto de continuación
+# Hall p?blico y administraci?n privada ? validaci?n
 
-Estado: **implementación parcial, pendiente de validación integral**. No se ha
-hecho commit ni push. La base de datos de desarrollo y su `.env` no se han modificado.
+Fecha: 5 de noviembre de 2026. Implementaci?n y comprobaciones automatizadas
+completadas. Sin commit ni push de este bloque.
 
-## Implementado y comprobado automáticamente
+## Comportamiento implementado
 
-- `/` conserva `HomeView` como presentación e incorpora un catálogo público.
-- `/votaciones` presenta el listado; `/historial` redirige a él.
-- Tarjetas responsive con metadatos, filtros combinados, paginación, carga, error,
-  vacío, limpieza de filtros y una suscripción WebSocket de catálogo.
-- Endpoints de listado con proyección explícita de campos públicos y orden por
-  disponibilidad y fecha. Consideran también el cierre programado.
-- `/acceso`, `/admin` y `/admin/crear`; protección de rutas y redirección al caducar.
-- Creación y operaciones administrativas exigen sesión también en peticiones API.
-  Los tokens individuales siguen validándose si se proporcionan, pero no sustituyen
-  la sesión; el administrador puede recuperar cualquier votación sin su token.
-- Contraseña scrypt por entorno; cookie HttpOnly, SameSite Strict y Secure por
-  defecto; sesiones de ocho horas con hash en PostgreSQL, revocación y cambio de
-  contraseña; protección de origen/cabecera y límites de intentos de acceso.
-- Migración `a721c409dd10` y generador interactivo `scripts/configure_admin.py`.
-- Última comprobación: **192 tests backend**, **35 tests frontend** y build correcto.
+- HomeView mantiene la presentaci?n en `/` e incorpora el cat?logo p?blico.
+  `/votaciones` muestra el listado y `/historial` redirige a ?l.
+- Tarjetas con t?tulo, tipo, fecha y estado; activas y recientes primero.
+  Filtros combinados, limpieza, paginaci?n, estados vac?os, errores y carga.
+- Un WebSocket de cat?logo actualiza los filtros al cerrar o reabrir votaciones;
+  recupera el listado tras reconectar y cancela sus esperas al salir.
+- Login, logout y administraci?n privada con sesi?n de ocho horas en PostgreSQL.
+  La API rechaza creaci?n y administraci?n sin sesi?n, incluso con token individual.
+- Recuperaci?n de votaciones anteriores mediante la sesi?n global. No se guardan
+  nuevos tokens administrativos en almacenamiento local ni en enlaces.
+- Cookie HttpOnly, SameSite Strict y Secure por defecto; hash scrypt, control de
+  origen y cabecera, l?mites de intentos y revocaci?n/caducidad.
+- Retirados la vista y el servicio del hist?rico local que ya no ten?an ruta.
+- Corregidos respuestas tard?as, duplicados de paginaci?n y mensajes heredados.
+- La retirada del token antiguo de la URL conserva el estado de Vue Router;
+  se a?adi? una regresi?n para evitar el aviso y problemas de navegaci?n.
+- Cierre por fecha coherente en API y vistas. Reabrir expl?citamente una votaci?n
+  con plazo vencido retira ese plazo para permitir votar de nuevo.
 
-Las regresiones antiguas usan un administrador autorizado de prueba. Los tests
-de `test_admin_session_and_catalog.py` ejercitan una instancia real sin sustituir
-la autorización: visitantes, cookies, permisos, logout, caducidad, rotación, intentos
-repetidos, filtros y eventos de catálogo.
+## Pruebas automatizadas
 
-## Pendiente antes de dar la tarea por terminada
+- Backend: **195 tests superados**, ejecutados con `pytest -v`.
+- Frontend: **38 tests superados**; `npm run build` correcto.
+- Casos de autorizaci?n real independientes de las sustituciones usadas en
+  regresiones antiguas: visitantes, cookies, CSRF, sesi?n caducada, logout,
+  rotaci?n, recuperaci?n de acceso, rate limiting, filtros y eventos WebSocket.
+- Pruebas de vistas: filtros, errores/vac?os, paginaci?n, respuestas tard?as,
+  desmontaje, reconexi?n, enlaces sin secretos y cierre programado.
 
-1. Revisar el diseño en navegador, móvil, tablet y escritorio. No se ha validado
-   visualmente este nuevo diseño ni completado su navegación con teclado.
-2. Configurar una contraseña elegida por el usuario. Ejecutar el generador y añadir
-   su salida `ADMIN_PASSWORD_HASH=...` al `.env` privado. No existe contraseña por
-   defecto. Documentar estas variables en `.env.example` y en la guía de seguridad.
-3. Aplicar y comprobar `alembic upgrade head` en desarrollo y verificar la migración
-   sobre datos existentes. Hasta entonces no está creada la tabla de sesiones en
-   la base de desarrollo; las pruebas crean su tabla exclusivamente en la base test.
-4. Para HTTP local, configurar explícitamente `ADMIN_COOKIE_SECURE=false`. En
-   producción debe ser `true`, con HTTPS. Comprobar que frontend y API usan el
-   mismo hostname (por ejemplo, ambos `localhost`) para SameSite Strict. Validar el
-   flujo real de login, persistencia de cookie, logout, caducidad y reanudación.
-5. Ampliar las pruebas de UI del catálogo, guardas y navegación. Las pruebas de
-   servicios cubren las consultas combinadas, pero falta ejercitar los filtros
-   montados, limpiar/vacíos, paginación y cambios en directo con dos navegadores.
-6. Revisar y retirar o migrar `LegacyHistoryView.vue`, actualmente sin ruta pública
-   y conservada temporalmente para las regresiones del antiguo histórico local.
-   No debe utilizarse como interfaz de administración del sistema nuevo.
-7. Revisar los mensajes de login/caducidad y los textos heredados de enlaces secretos;
-   completar copia de enlaces públicos y navegación privada donde sea necesario.
-8. Verificar cierre/reapertura, fechas de cierre cumplidas, reconexión y estado de
-   filtros con datos reales; revisar las respuestas tardías y los temporizadores.
-9. Actualizar README/guía de seguridad, revisar el diff completo y ejecutar de nuevo
-   toda la suite y build después de las correcciones. Preparar el commit final.
+## Comprobaciones en navegador
 
-## Servicios al cerrar este bloque
+- Portada p?blica en escritorio y m?vil de 375 px.
+- Login y listado administrativo en m?vil; redirecci?n del acceso directo sin sesi?n.
+- Recuperaci?n de la votaci?n de prueba anterior sin conservar su token.
+- Cierre/reapertura y confirmaciones desde el panel m?vil.
+- Panel y formulario de creaci?n en 375 y 768 px; listado privado en tablet.
+- Logout real con regreso al acceso privado.
+- Filtros combinados y limpieza comprobados en la sesi?n anterior.
+- Cat?logo m?vil filtrado por inactivas: reapertura desde otro cliente cambia
+  el total de 8 a 7 sin recargar. Nuevo cierre lo devuelve a 8.
+- Interrupci?n real del backend: aviso visible; al arrancarlo, reconexi?n
+  autom?tica, desaparici?n del aviso y recuperaci?n del cat?logo sin recargar.
 
-Se ha solicitado detener FastAPI, Vite y el contenedor `votestupid-db`, conservando
-el volumen de PostgreSQL. No se han detenido servicios ajenos al proyecto.
+Estas comprobaciones no equivalen a repetir una matriz exhaustiva de todas las
+vistas, tama?os y recorridos ?nicamente con teclado. Tampoco se ha repetido hoy
+el voto de los tres tipos desde navegador; esos flujos est?n cubiertos por las
+pruebas automatizadas y las validaciones anteriores del proyecto.
 
-Para continuar: leer este informe, revisar `git status`, arrancar PostgreSQL,
-configurar las variables privadas, aplicar la migración y arrancar backend/frontend.
-No publicar ni desplegar este punto intermedio como una tarea terminada.
+## Configuraci?n y persistencia
+
+La migraci?n `a721c409dd10` ya se aplic? en desarrollo durante la sesi?n anterior,
+conservando las votaciones existentes. PostgreSQL conserva votaciones, votos y
+sesiones; el cat?logo actual muestra los datos de la sesi?n anterior.
+
+El usuario debe elegir su contrase?a definitiva localmente:
+
+```powershell
+python scripts/configure_admin.py --write-env --local-http
+```
+
+No hay contrase?a predeterminada. Para producci?n omitir `--local-http` y usar
+HTTPS. Reiniciar el backend tras configurar la contrase?a. Las pruebas de navegador
+usaron una credencial temporal solo en el proceso; no se guard? en el `.env`.
+Frontend y API deben usar el mismo hostname, por ejemplo `localhost`.
+
+## Entrega
+
+Consultar README y la gu?a de seguridad actualizados. Revisar `git diff` antes
+del commit. AGENTS.md, los tres archivos locales y los archivos privados de entorno
+siguen excluidos de Git. No eliminar el volumen de PostgreSQL al detener servicios.

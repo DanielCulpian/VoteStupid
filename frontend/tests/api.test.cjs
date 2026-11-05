@@ -23,6 +23,8 @@ test('devuelve los datos y conserva las cabeceras de administración', async () 
   assert.equal(data.id, 'poll-1')
   assert.equal(received.options.headers.get('X-Admin-Token'), 'token-de-prueba')
   assert.equal(received.options.headers.get('Content-Type'), 'application/json')
+  assert.equal(received.options.headers.get('X-Requested-With'), 'VoteStupid')
+  assert.equal(received.options.credentials, 'include')
   assert.equal(received.url, 'http://127.0.0.1:8000/api/admin/polls/poll-1')
   assert.ok(received.options.signal instanceof AbortSignal)
 })
@@ -40,7 +42,7 @@ test('traduce un fallo de conexión con el backend', async () => {
 test('presenta errores HTTP comprensibles y conserva el código de estado', async () => {
   for (const [status, detail, expected] of [
     [404, 'Not Found', /No se ha encontrado la votación/],
-    [403, 'Forbidden', /acceso de administración no es válido/],
+    [403, 'Forbidden', /No tienes autorización/],
     [500, 'password=secreto interno', /servidor no puede completar/],
     [429, 'Too Many Requests', /demasiadas peticiones/],
     [409, 'La votación está cerrada.', /La votación está cerrada/],

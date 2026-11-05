@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 from typing import Annotated
 
@@ -87,6 +87,13 @@ class PollResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+    @model_validator(mode="after")
+    def effective_status(self):
+        """Presenta como cerrada una votación cuyo plazo ha vencido, sin alterar la base de datos."""
+        if self.closes_at is not None and self.closes_at <= datetime.now(timezone.utc):
+            self.is_active = False
+        return self
+
 class PollCreatedResponse(PollResponse):
     admin_token: str
 
@@ -100,6 +107,13 @@ class PollSummary(BaseModel):
     created_at: datetime
     is_active: bool
     closes_at: datetime | None
+
+    @model_validator(mode="after")
+    def effective_status(self):
+        """Mantiene coherente el estado público con los filtros y las restricciones de voto."""
+        if self.closes_at is not None and self.closes_at <= datetime.now(timezone.utc):
+            self.is_active = False
+        return self
 
 
 class PollPage(BaseModel):

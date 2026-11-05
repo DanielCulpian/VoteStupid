@@ -133,3 +133,40 @@ def test_catalog_filters_pagination_privacy_and_websocket(private_client):
     for poll in [single, multiple, ranking]:
         assert poll["admin_token"] not in str(first)
     assert "token" not in str(first) and "options" not in str(first)
+
+
+def test_secure_cookie_is_default_and_cannot_authorize_plain_http(private_client, monkeypatch):
+    """Mantiene Secure por defecto y comprueba que el navegador no envía esa cookie por HTTP."""
+    client, _ = private_client
+    monkeypatch.delenv('ADMIN_COOKIE_SECURE')
+    response = sign_in(client)
+    assert 'Secure' in response.headers['set-cookie']
+    assert 'HttpOnly' in response.headers['set-cookie']
+    assert client.get('/api/admin/auth/session').status_code == 401
+
+
+def test_same_site_without_custom_header_cannot_login_or_mutate(private_client):
+    """Rechaza peticiones simples incluso cuando el origen coincide y existe una cookie válida."""
+    client, _ = private_client
+    client.headers.pop('X-Requested-With')
+    assert client.post('/api/admin/auth/login', json={'password': PASSWORD}).status_code == 403
+    client.headers['X-Requested-With'] = 'VoteStupid'
+    sign_in(client)
+    poll = create(client)
+    client.headers.pop('X-Requested-With')
+    assert client.put(f"/api/admin/polls/{poll['id']}/close").status_code == 403
+    assert client.delete('/api/admin/auth/session').status_code == 403
+
+
+def test_reopen_expired_poll_retires_deadline_and_allows_voting(private_client):
+    """Reabrir una votación vencida debe permitir votar y coincidir en detalle y catálogo."""
+    client, _ = private_client
+    sign_in(client)
+    poll = create(client, closes_at=(datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat())
+    assert poll['is_active'] is False
+    assert client.get(f"/api/polls/{poll['id']}").json()['is_active'] is False
+    reopened = client.put(f"/api/admin/polls/{poll['id']}/reopen")
+    assert reopened.status_code == 200
+    assert reopened.json()['is_active'] is True and reopened.json()['closes_at'] is None
+    assert client.post(f"/api/polls/{poll['id']}/votes", headers={'X-Voter-Token': 'z' * 40},
+                       json={'selected_option_ids': [poll['options'][0]['id']]}).status_code == 201

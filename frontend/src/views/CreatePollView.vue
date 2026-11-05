@@ -2,10 +2,9 @@
 import { nextTick, ref } from 'vue'
 import LiveAnnouncer from '../components/LiveAnnouncer.vue'
 import { createPoll } from '../services/pollService'
-import { rememberPoll } from '../services/historyService'
 import type {
   PollType,
-  PollCreatedResponse,
+  PollResponse,
 } from '../types/poll'
 
 const title = ref('')
@@ -18,10 +17,9 @@ const publicUrl = ref('')
 const adminUrl = ref('')
 const isSubmitting = ref(false)
 const errorMessage = ref('')
-const createdPoll = ref<PollCreatedResponse | null>(null)
+const createdPoll = ref<PollResponse | null>(null)
 const invalidField = ref('')
 const formAnnouncement = ref('')
-const historyWarning = ref('')
 
 // Anuncia el error de validación y lleva el foco al campo que necesita corrección.
 async function showValidationError(message: string, fieldId: string) {
@@ -54,7 +52,6 @@ async function submitPoll() {
   if (isSubmitting.value) return
   errorMessage.value = ''
   invalidField.value = ''
-  historyWarning.value = ''
   createdPoll.value = null
 
   const cleanedOptions = options.value.map(option => option.trim())
@@ -102,17 +99,13 @@ async function submitPoll() {
         : null,
     })
 
-    createdPoll.value = poll
+    const { admin_token: _unusedToken, ...publicPoll } = poll
+    createdPoll.value = publicPoll
     publicUrl.value =
       `${window.location.origin}/votacion/${poll.id}`
 
     adminUrl.value =
       `${window.location.origin}/admin/${poll.id}`
-    try {
-      rememberPoll(poll)
-    } catch (error) {
-      historyWarning.value = error instanceof Error ? error.message : 'No se ha podido guardar el histórico. Guarda los enlaces de tu votación.'
-    }
     await nextTick()
     document.getElementById('creation-success')?.focus()
   } catch (error) {
@@ -128,12 +121,12 @@ async function submitPoll() {
 
 <template>
   <main id="main-content" class="home" tabindex="-1">
-    <LiveAnnouncer :message="isSubmitting ? 'Creando tu votación.' : createdPoll ? 'Votación creada correctamente. Guarda el enlace privado de administración.' : formAnnouncement" />
+    <LiveAnnouncer :message="isSubmitting ? 'Creando tu votación.' : createdPoll ? 'Votación creada correctamente. Puedes gestionarla desde tu zona privada.' : formAnnouncement" />
     <header class="header">
       <RouterLink class="logo" to="/">
         VoteStupid<span>!</span>
       </RouterLink>
-      <RouterLink class="history-nav" to="/admin">Histórico</RouterLink>
+      <RouterLink class="history-nav" to="/admin">Administración</RouterLink>
     </header>
 
     <section class="form-container">
@@ -143,7 +136,6 @@ async function submitPoll() {
       <div v-if="createdPoll" class="success-message">
         <h2 id="creation-success" tabindex="-1">¡Votación creada!</h2>
         <p>Tu votación se ha guardado correctamente.</p>
-        <p v-if="historyWarning" class="warning-message" role="alert">{{ historyWarning }}</p>
 
         <div class="created-link">
           <h3>Enlace para los participantes</h3>
