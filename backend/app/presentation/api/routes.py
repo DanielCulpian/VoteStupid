@@ -1,4 +1,5 @@
 from app.domain.vote_rule_error import VoteRuleError
+from app import __version__
 from typing import Literal
 from fastapi import Query
 from app.infrastructure.security.admin_session import require_admin_session
@@ -72,8 +73,8 @@ def get_info():
     """Return the application name, version, and description."""
     return {
         "app": "VoteStupid",
-        "version": "0.1.0",
-        "status": "En desarrollo",
+        "version": __version__,
+        "status": "Preparado",
         "description": "Aplicación de votaciones para amigos"
     }
 

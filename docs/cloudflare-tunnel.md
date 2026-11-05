@@ -1,153 +1,78 @@
-# Publicar VoteStupid con Cloudflare Tunnel
+# HTTPS publication with Cloudflare Tunnel
 
-## Dirección estable con tu dominio
+## Free temporary publication
 
-El modo elegido actualmente es **temporal gratuito**: el usuario solo había añadido
-`votestupid.com` al panel de Cloudflare, sin registrar ese dominio. Añadir una zona
-no otorga su propiedad; no se han modificado sus DNS ni contratado servicios.
-Usa `scripts/tunnel.ps1 start -Mode temporary` y comparte la URL que devuelve.
+Quick Tunnels publish the local Nginx service through a temporary HTTPS hostname. No account, domain, router port forwarding, or permanent external server is needed. Data remains in the local PostgreSQL volume.
 
-Si en el futuro registras un dominio, podrás activar el modo estable. Para usar el dominio raíz,
-deja el campo Subdomain vacío y selecciona `votestupid.com` como Domain. El comando
-de arranque correspondiente es:
-
-```powershell
-.\scripts\tunnel.ps1 start -Hostname votestupid.com
-```
-
-El hostname `votestupid.com` no está publicado por este proyecto. Si ya existe un registro DNS para la raíz, comprueba
-qué servicio utiliza antes de sustituirlo. Los ejemplos siguientes con subdominio
-también sirven si prefieres conservar otro servicio en el dominio raíz.
-
-Se reutiliza tu dominio existente en Cloudflare. No necesitas abrir puertos del
-router, contratar un servidor ni comprar otro dominio. Usa un subdominio libre
-de un nivel, por ejemplo `votestupid.tudominio.es`, para aprovechar el certificado
-habitual de Cloudflare. No sobrescribas un registro DNS utilizado por otro servicio.
-
-1. En tu cuenta de Cloudflare, abre **Networking → Tunnels → Create a tunnel**.
-   Crea un túnel dedicado llamado `votestupid` y elige el conector `cloudflared`.
-2. Selecciona Docker. Del comando mostrado, copia únicamente el valor que sigue
-   a `--token` y guárdalo localmente en el `.env` privado:
-
-   ```dotenv
-   CLOUDFLARE_TUNNEL_TOKEN=valor_privado_del_token
-   ```
-
-   No envíes el token por chat, no lo guardes en `.env.example` y no ejecutes el
-   comando de instalación: Compose se encarga del contenedor. Quien tenga el token
-   puede conectar otro conector al túnel; si se filtra, rótalo en Cloudflare.
-3. Desde la raíz, con Docker Desktop iniciado:
-
-   ```powershell
-   .\scripts\tunnel.ps1 start -Hostname votestupid.tudominio.es
-   ```
-
-4. En ese túnel, añade una **Published application route**:
-   - Hostname: el subdominio elegido, por ejemplo `votestupid.tudominio.es`.
-   - Path: vacío, para servir toda la aplicación.
-   - Service: tipo **HTTP**, dirección **`frontend:8080`**.
-   - No añadas rutas hacia PostgreSQL, FastAPI ni redes privadas.
-
-   Cloudflare crea el registro DNS del hostname. No uses `localhost:8080`: dentro
-   del conector apuntaría al propio contenedor, no a Nginx.
-5. Abre `https://votestupid.tudominio.es`. El servicio interno es HTTP en una red
-   Docker aislada; los visitantes usan HTTPS y el conector cifra la conexión con
-   Cloudflare. Conserva la contraseña administrativa actual y entra en `/acceso`.
-
-## Controlar la publicación
-
-```powershell
-.\scripts\tunnel.ps1 status
-.\scripts\tunnel.ps1 logs
-.\scripts\tunnel.ps1 url
-.\scripts\tunnel.ps1 stop
-```
-
-`start` espera a los servicios y a que Cloudflare registre una conexión. Confirma
-después el acceso por el hostname, ya que el DNS y la ruta se configuran en tu
-cuenta. `stop` detiene primero el túnel y luego la aplicación, conservando el volumen.
-El DNS puede seguir existiendo, pero no debe permitir acceder a VoteStupid apagado.
-Ctrl+C termina únicamente el seguimiento de logs; **no detiene el túnel**.
-`url` muestra la última dirección generada; consulta `status` para saber si sigue activo.
-
-Para volver a HTTP local sin publicación, usa `scripts/docker.ps1 start`. Este
-script detiene primero cualquier conector del proyecto y restaura las variables
-locales del `.env`. El conector tiene `restart: "no"`: no publica automáticamente
-al reiniciar Docker Desktop. Tras una suspensión o cambio de red, comprueba su estado.
-
-El modo público genera `.env.tunnel` y `.tunnel-url`, excluidos de Git y de las
-imágenes. No modifica tu contraseña ni el `.env` original. Fuerza cookie Secure y
-un único origen HTTPS exacto. El login local por HTTP no debe usarse en ese modo.
-
-## Alternativa gratuita sin dominio
+From the root on Windows:
 
 ```powershell
 .\scripts\tunnel.ps1 start -Mode temporary
+.\scripts\tunnel.ps1 url
+.\scripts\tunnel.ps1 status
+.\scripts\tunnel.ps1 logs
+.\scripts\tunnel.ps1 stop
 ```
 
-Genera una URL HTTPS `trycloudflare.com` sin cuenta ni token. Cambia al crear otro
-túnel, no tiene garantía de disponibilidad y está pensada para pruebas, con un
-límite de 200 peticiones simultáneas. El script configura el origen exacto recibido;
-no utiliza un comodín CORS. Las sesiones del navegador no se trasladan entre
-hostnames distintos. Para una dirección estable, usa el modo con dominio.
+Start waits for the app and a registered Cloudflare connection, then configures the exact generated origin. Stop disconnects the tunnel before stopping the app. Ctrl+C only exits log following. The connector does not restart automatically with Docker.
 
-## Seguridad y diagnóstico
+Share the printed HTTPS URL. It changes when another Quick Tunnel is created, and browser sessions do not transfer between different hostnames. `url` shows the most recently generated address; `status` indicates whether the connector is running.
 
-- Solo Nginx recibe tráfico del túnel. El conector comparte una red dedicada con
-  frontend y otra para salir a Cloudflare; no pertenece a la red de la API/base.
-- Nginx solo confía en `CF-Connecting-IP` procedente de `172.30.79.20`, la IP del
-  conector, y conserva los límites por visitante. Las cabeceras enviadas al puerto
-  local no pueden suplantar ese proxy. HTTP público se redirige a HTTPS.
-- Uvicorn sigue confiando exclusivamente en la IP interna de Nginx. No se usan
-  comodines de proxies, CORS ni rutas privadas. No se publican 5432 ni 8000.
-- La subred dedicada es `172.30.79.0/24`. Si colisiona con otra red, hay que adaptar
-  conjuntamente Compose y la IP de confianza de Nginx; no ampliar el rango confiado.
-- No crees reglas de caché que incluyan `/api/`; respeta `Cache-Control: no-store`.
-  No registres cookies, contraseñas ni el token del túnel. Compartir el enlace hace
-  público el catálogo; la creación y administración siguen exigiendo sesión.
-- Si no conecta, consulta los logs: requiere salida a Cloudflare por TCP 7844
-  (se usa HTTP/2). No se necesitan puertos entrantes ni cambios en el router.
-- En caso de fallo al arrancar, el script intenta detener el conector para no
-  dejar una publicación incompleta. Comprueba `status` si Docker no responde.
+Quick Tunnels have no uptime guarantee, are intended for testing and temporary use, and allow at most 200 concurrent in-flight requests. They do not support SSE; VoteStupid uses WebSockets.
 
-## Pruebas antes de dar la tarea por terminada
+## Stable hostname with an owned domain
 
-Desde un móvil, **desactiva Wi-Fi y utiliza datos móviles**:
+Adding a domain to the Cloudflare dashboard does not register it or establish ownership. Only configure hostnames under a domain you own and control.
 
-1. Abre el hostname HTTPS y combina los filtros.
-2. Vota en elección única, múltiple y ranking. Comprueba los resultados en otro
-   dispositivo sin recargar.
-3. Inicia sesión en `/acceso`, crea una votación y ciérrala/reábrela. Los controles
-   del otro dispositivo deben cambiar en directo.
-4. En una ventana privada sin sesión, abre `/admin`: debe redirigir al acceso.
-5. Ejecuta `tunnel.ps1 stop` y recarga desde datos móviles: VoteStupid debe dejar
-   de responder; puede aparecer un error de Cloudflare.
-6. Arranca de nuevo y comprueba que votaciones y resultados se conservan.
+If you already own a domain managed by Cloudflare:
 
-La prueba desde datos móviles y la configuración de la cuenta deben confirmarse
-con el usuario; una prueba HTTP local no las sustituye.
+1. Create a dedicated cloudflared tunnel in **Networking → Tunnels**.
+2. Select Docker and copy only the token from the provided command into the private `.env` as `CLOUDFLARE_TUNNEL_TOKEN`. Do not execute that installation command or share the token.
+3. Run:
 
-### Comprobaciones realizadas el 5 de noviembre de 2026
+   ```powershell
+   .\scripts\tunnel.ps1 start -Hostname vote.your-domain.example
+   ```
 
-- Quick Tunnel conectado y hall público accesible con certificado HTTPS válido.
-- Seis combinaciones de filtros (estado y tipo), redirección HTTP a HTTPS y WSS.
-- Voto y actualización anónimos en los tres tipos sobre votaciones de prueba,
-  con eventos `results_updated` recibidos por WebSocket cifrado.
-- Peticiones públicas de creación, listado administrativo y cierre sin sesión
-  rechazadas; origen administrativo ajeno rechazado.
-- Cabeceras locales falsas ignoradas; proxy de confianza, IP por visitante,
-  rate limiting y aislamiento de la red del conector comprobados localmente.
-- Al detener túnel y aplicación, el enlace dejó de servir VoteStupid (HTTP 530
-  de Cloudflare). Tras arrancar otro Quick Tunnel se compararon catálogo y
-  resultados públicos con la copia anterior: todos se conservaron.
-- Cookie Secure y origen HTTPS exacto confirmados en el backend; 8000 y 5432 sin
-  publicar. El conector temporal no recibe el token privado del túnel con nombre.
+4. In the tunnel, add a **Published application route** with your chosen hostname, an empty path, type **HTTP**, and service **frontend:8080**. Do not use localhost inside the connector.
+5. Confirm the public HTTPS page works. Do not overwrite DNS records used by another service.
 
-Pendiente de confirmación del usuario: datos móviles, login administrativo HTTPS,
-creación, cierre y reapertura desde la interfaz y actualización entre dispositivos.
-No dar la tarea completa hasta realizar esas comprobaciones. El token del túnel
-con nombre permanece privado y no se necesita para el modo temporal.
+A single-level subdomain normally uses the zone's universal certificate. Domain registration is separate from the free connector. No domain purchase is required for temporary URLs.
 
-Referencias: [crear un túnel con dominio](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/get-started/create-remote-tunnel/),
-[Quick Tunnels](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/)
-y [cabeceras de Cloudflare](https://developers.cloudflare.com/fundamentals/reference/http-headers/).
+## Linux and manual operation
+
+The Compose files work with Linux containers. The PowerShell helpers require `pwsh` on Linux; alternatively use Compose directly.
+
+For a Quick Tunnel, create the private generated settings:
+
+```sh
+printf '%s\n' 'DOCKER_PUBLIC_ORIGIN=https://unconfigured.invalid' > .env.tunnel
+docker compose --env-file .env --env-file .env.tunnel -f compose.yaml -f compose.tunnel.yaml up -d --build --wait db backend frontend
+docker compose --env-file .env --env-file .env.tunnel -f compose.yaml -f compose.tunnel.yaml up -d --no-deps cloudflared
+docker compose --env-file .env --env-file .env.tunnel -f compose.yaml -f compose.tunnel.yaml logs --tail 100 cloudflared
+```
+
+Take the exact HTTPS URL from the connector logs, replace the origin in `.env.tunnel`, and run the first `up` command again so the backend accepts the new origin. Do not edit the main password configuration. Stop using the same Compose files with `stop`.
+
+For a named tunnel, set the exact owned HTTPS origin first and append `-f compose.tunnel.named.yaml` to the Compose commands; the private `.env` must contain its token.
+
+## Security and troubleshooting
+
+- Only Nginx is connected to the tunnel network. The connector cannot resolve the private database/API services.
+- Nginx trusts visitor IP headers only from the connector at 172.30.79.20, preserving per-visitor limits. Local clients cannot spoof that source.
+- HTTP received from the connector is redirected to HTTPS. Backend cookies are always Secure in public mode and CORS uses one exact origin.
+- Uvicorn trusts only Nginx's application-network IP. Ports 5432 and 8000 are never published by the normal stack.
+- The connector uses a separate outbound network and HTTP/2 on TCP 7844. No inbound router port is needed.
+- Do not override `Cache-Control: no-store` for `/api/` with Cloudflare cache rules.
+- The fixed tunnel subnet is 172.30.79.0/24. Change both Compose and Nginx's trusted connector IP if it conflicts with another network; do not broaden trust.
+- A failed helper startup attempts to stop the connector. Inspect `status` if Docker itself is unavailable.
+- To return to local HTTP, use `scripts/docker.ps1 start`, which first disconnects the tunnel.
+- Quick mode does not receive the optional named-tunnel token. Tokens and generated origin files remain excluded from Git and images.
+
+## External-device acceptance
+
+Turn off the phone's Wi-Fi and use mobile data. Check filters; all three vote types and vote changes; administrator HTTPS login, creation, closing/reopening; live updates in a second browser/device; and denial of private routes in a signed-out window.
+
+After stopping the tunnel, refresh externally: the app must stop responding, usually with a Cloudflare error. Restart and verify saved polls and results. This mobile-data check cannot be replaced by a request from the host PC.
+
+References: [Quick Tunnels](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/), [named tunnels](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/get-started/create-remote-tunnel/), and [Cloudflare headers](https://developers.cloudflare.com/fundamentals/reference/http-headers/).

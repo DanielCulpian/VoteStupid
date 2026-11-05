@@ -6,6 +6,7 @@ RUN pip install --no-cache-dir -r requirements.txt && useradd --uid 10001 --crea
 COPY alembic.ini .
 COPY backend backend
 COPY scripts/container_start.py scripts/container_start.py
+COPY scripts/configure_admin.py scripts/configure_admin.py
 USER app
 EXPOSE 8000
 CMD ["python", "scripts/container_start.py"]

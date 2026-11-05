@@ -10,14 +10,14 @@ from app.infrastructure.security.admin_session import password_hash
 
 def main():
     """Request and confirm a sufficiently long password, exposing only its hash."""
-    parser = argparse.ArgumentParser(description="Configura una contraseña administrativa sin mostrarla.")
-    parser.add_argument('--write-env', action='store_true', help='Guarda el hash en el .env privado del proyecto.')
-    parser.add_argument('--local-http', action='store_true', help='Permite cookie sin Secure únicamente para desarrollo HTTP local.')
+    parser = argparse.ArgumentParser(description="Configure the administrator password without displaying it.")
+    parser.add_argument('--write-env', action='store_true', help='Store the hash in the private project .env file.')
+    parser.add_argument('--local-http', action='store_true', help='Allow cookies without Secure only for local HTTP development.')
     args = parser.parse_args()
     password = getpass("Nueva contraseña de administración (entre 16 y 256 caracteres): ")
     confirmation = getpass("Repite la contraseña: ")
     if not 16 <= len(password) <= 256 or password != confirmation:
-        raise SystemExit("Las contraseñas deben coincidir y tener al menos 16 caracteres.")
+        raise SystemExit("Las contraseñas deben coincidir y tener entre 16 y 256 caracteres.")
     encoded = password_hash(password)
     if args.write_env:
         from dotenv import set_key

@@ -1,138 +1,60 @@
-# Seguridad y despliegue de la API
+# Security and operating limits
 
-## Límites de entrada
+## Intended use
 
-La API admite títulos de 1–255 caracteres, descripciones de hasta 5.000,
-entre 2 y 50 opciones de 1–255 caracteres y hasta 50 identificadores por voto.
-Recorta los espacios exteriores y rechaza campos adicionales, opciones vacías,
-UUID inválidos y fechas sin zona horaria. Los casos de uso siguen comprobando
-pertenencia de opciones, duplicados, tipo de voto y cierre de la votación.
-El cuerpo HTTP completo está limitado a **64 KiB**, también sin `Content-Length`.
-Los valores excesivos devuelven `422`; un cuerpo excesivo devuelve `413`.
+VoteStupid supports temporary anonymous polls for trusted groups. There are no participant accounts. A browser-local voter token identifies a vote; users can create another identity by clearing storage or using another profile. This is not an identity-verified election system.
 
-## Protección frente a abusos
+The catalog, individual polls, and aggregate results are public. Creation and every administrative API operation require the administrator session. Legacy individual poll tokens are checked when supplied but cannot replace that session.
 
-Los límites usan una ventana móvil de 60 segundos por IP, compartida entre
-votaciones e independiente del token. Los intentos inválidos también cuentan.
+## Credentials and sessions
 
-| Operación | Peticiones por minuto e IP |
+The administrator password is stored only as a salted scrypt hash in the private configuration. Sessions contain random secrets in HttpOnly, SameSite Strict cookies scoped to `/api`; PostgreSQL stores only their hashes and credential version. Sessions expire after eight hours. Logout revokes the session; changing the password invalidates sessions associated with the previous hash.
+
+Cookies default to Secure. Only local HTTP development may explicitly set `ADMIN_COOKIE_SECURE=false`. Tunnel mode forces it to true. Keep the same hostname for frontend and API when using SameSite cookies.
+
+Administrative writes require `X-Requested-With: VoteStupid` and reject a supplied Origin unless it exactly matches the configured list. There are no wildcard origins. Frontend route guards improve navigation; backend authorization remains authoritative.
+
+Voter and administration tokens are hashed before persistence. Original per-poll administration tokens are returned only by the authorized creation endpoint. Public responses do not include them. The frontend does not persist new administrative tokens.
+
+## Input and traffic limits
+
+Titles and option text allow 1–255 characters; descriptions allow at most 5,000. A poll has 2–50 options, and a vote contains at most 50 option identifiers. Inputs are trimmed; extra fields, empty values, duplicate selections, foreign options, invalid UUIDs, and dates without time zones are rejected.
+
+HTTP bodies are limited to 64 KiB, including chunked requests. Invalid input receives 422; oversized bodies receive 413. Closing deadlines are enforced by the backend even if a client has stale state.
+
+| Operation | Requests per minute per IP |
 | --- | ---: |
-| Intentos de inicio de sesión | 5 |
-| Creación de votaciones | 10 |
-| Registro y modificación de votos, conjuntamente | 30 |
-| Todas las operaciones administrativas, conjuntamente | 30 |
-| Aperturas WebSocket | 30 |
-| Total HTTP y WebSocket | 300 |
+| Login attempts | 5 |
+| Poll creation | 10 |
+| Vote creation and modification combined | 30 |
+| Administrative operations combined | 30 |
+| WebSocket openings | 30 |
+| All HTTP and WebSocket traffic combined | 300 |
 
-Una petición excesiva recibe `429` y `Retry-After` en segundos. Las lecturas públicas
-mantienen su cupo cuando se agota el administrativo. Hay un máximo de 20 sockets
-simultáneos por IP y 1.000 por proceso. La denegación WebSocket usa HTTP 429 si el
-servidor admite esa extensión; en caso contrario rechaza el handshake con 1008.
-El canal solo publica resultados y estado; los mensajes del cliente cierran el canal.
+Login additionally has a global limit of 20 attempts per minute per process. Excess requests receive 429 and Retry-After. At most 20 simultaneous sockets per IP and 1,000 per process are allowed. Shared households/carrier NATs share limits.
 
-No se guardan IP en PostgreSQL ni se exigen cuentas. Los contadores son temporales,
-acotados a 10.000 claves y se reinician con el proceso. Si se llena ese registro,
-se rechazan claves nuevas temporalmente, sin expulsar las que protegen un cupo.
-Las personas que comparten IP también comparten límites.
+Counters are bounded, in memory, and reset when the process restarts. Use **one API worker**: multiple processes would have independent quotas and WebSocket registries. Scaling requires coordinated limits and event delivery; no external paid service or Redis is required for this release.
 
-El inicio de sesión tiene además un límite global de 20 intentos por minuto
-por proceso para acotar el trabajo de verificación de contraseñas.
+## Errors, logs, and proxies
 
-Este mecanismo está pensado para **un único worker**. Con varios procesos cada
-uno tendría su cupo y su registro WebSocket. Antes de escalar, centralizar ambos
-registros o aplicar límites coordinados en Nginx; no se ha añadido Redis ni un
-servicio externo. Estos límites no sustituyen la protección volumétrica del proxy.
+Validation responses omit original input and internal validator context. Internal errors return generic messages. Access logs omit query strings; never add logs for passwords, authentication headers, cookies, request bodies, or SQL parameters.
 
-## Tokens, errores y caché
+API responses use Cache-Control: no-store. Preserve it at Nginx and Cloudflare. WebSockets publish only results and state; client write messages are rejected.
 
-Crear y administrar votaciones exige una sesión global de administrador, también
-cuando se proporciona un token individual. Las rutas públicas de catálogo,
-participación y resultados no devuelven credenciales administrativas.
+The local proxy overwrites forwarded IP headers; Uvicorn trusts only Nginx's explicit internal IP. Tunnel traffic is trusted only from the dedicated connector address, using Cloudflare's visitor IP header. Spoofed headers received from local clients do not establish proxy trust.
 
-`ADMIN_PASSWORD_HASH` contiene un hash scrypt; no hay contraseña predeterminada.
-Configúrala con `python scripts/configure_admin.py --write-env` y reinicia el
-backend. Para desarrollo HTTP local añade `--local-http`; en producción conserva
-`ADMIN_COOKIE_SECURE=true` y utiliza HTTPS. El `.env` debe permanecer privado.
+Do not publish PostgreSQL or FastAPI, enable wildcard proxy trust, expose the development database override, or add other private tunnel routes.
 
-Las sesiones duran ocho horas, se guardan mediante hash en PostgreSQL y usan
-cookies HttpOnly, SameSite Strict y Secure por defecto, limitadas a `/api`.
-Cerrar sesión revoca el registro; cambiar la contraseña invalida las sesiones
-anteriores. Las operaciones administrativas de escritura exigen la cabecera
-`X-Requested-With: VoteStupid` y comprueban el origen cuando está presente.
-Frontend y API deben compartir el hostname para las cookies SameSite.
+## Private files and backup handling
 
-El token administrativo original solo se devuelve en la creación y se utiliza
-mediante `X-Admin-Token`; el del participante usa `X-Voter-Token`. Se almacenan
-hashes y la comparación administrativa sigue siendo de tiempo constante.
-Los errores `422` no incluyen los valores recibidos ni contexto de validadores;
-los `500` muestran un mensaje genérico y su log omite la excepción y sus datos.
-Los logs estándar de acceso de Uvicorn omiten la query completa. No activar logs
-de cuerpos, cabeceras de autenticación o parámetros SQL en producción.
+Keep `.env`, all generated `.env.*` files, `.tunnel-url`, database archives, manifests, and the user's local launcher files outside Git and build contexts. The example environment files contain no usable credentials.
 
-Las respuestas llevan `Cache-Control: no-store`. Configurar además Cloudflare y
-Nginx para no cachear `/api/`; las reglas de caché del proxy no deben anularlo.
-No registrar `X-Admin-Token`, `X-Voter-Token`, cuerpos ni `$request_uri` con query.
-Los enlaces privados antiguos pueden llevar el secreto en el fragmento `#token=`,
-que el navegador no envía al servidor. La vista administrativa lo retira de la
-dirección al leerlo y no lo persiste. Los enlaces nuevos de administración dependen
-de la sesión y no incluyen tokens. No usar `?token=` ni poner secretos en rutas.
+Backups include votes, poll token hashes, voter hashes, and session records. Treat them as private data. Keep a separate secured copy of the configuration for recovery. Only restore trusted archives; database archives can contain executable SQL.
 
-## CORS y proxies de confianza
+A fresh clone and fresh volume must produce an empty catalog. Tests contain sample fixtures, but startup does not import them. Read [backup and restore](backup-and-restore.md) before recovering data.
 
-`CORS_ALLOWED_ORIGINS` contiene orígenes exactos separados por comas. Por defecto
-solo permite `http://localhost:5173`. Para usar también el puerto de desarrollo
-5174 hay que declararlo explícitamente. En producción usar exclusivamente el
-dominio HTTPS del frontend, sin `/` final, rutas ni comodines. El mismo listado
-se aplica al `Origin` del handshake WebSocket. Los clientes sin `Origin`, como
-herramientas HTTP, siguen sujetos a tokens y límites; CORS no es autenticación.
+## Known constraints
 
-La aplicación usa `scope.client`, establecido por Uvicorn, e ignora directamente
-`X-Forwarded-For` y `CF-Connecting-IP`. Arrancar detrás de Nginx con un único worker:
+Quick Tunnel hostnames change, depend on the PC and network remaining online, and have no availability guarantee. Browser storage is required to remember voter identity. Automated accessibility checks supplement rather than replace keyboard and screen-reader checks. Physical reboot and mobile-network acceptance require an operator to perform them.
 
-```powershell
-python -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000 --workers 1 --proxy-headers --forwarded-allow-ips="127.0.0.1" --ws-max-size 1024
-```
-
-No usar `--forwarded-allow-ips="*"`. Si Nginx se ejecuta en otra dirección o red,
-declarar solo sus direcciones reales y restringir el acceso directo al backend.
-
-En el futuro recorrido **Cloudflare → cloudflared → Nginx → Uvicorn**, Nginx debe
-aceptar tráfico únicamente desde el túnel y validar la IP que Cloudflare aporta.
-En un listener local dedicado al túnel, la base de configuración sería:
-
-```nginx
-listen 127.0.0.1:8080;
-set_real_ip_from 127.0.0.1;
-real_ip_header CF-Connecting-IP;
-
-location /api/ {
-    client_max_body_size 64k;
-    proxy_pass http://127.0.0.1:8000;
-    proxy_http_version 1.1;
-    proxy_set_header Host $host;
-    proxy_set_header X-Forwarded-For $remote_addr;
-    proxy_set_header X-Forwarded-Proto https;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection $connection_upgrade;
-    proxy_read_timeout 3600s;
-    proxy_cache off;
-}
-```
-
-`$connection_upgrade` requiere el `map` habitual de WebSocket en el bloque `http`:
-
-```nginx
-map $http_upgrade $connection_upgrade {
-    default upgrade;
-    '' close;
-}
-```
-
-Este fragmento es una guía, no un despliegue aplicado: verificar la topología,
-la IP efectiva de cloudflared y las reglas de acceso antes de publicarlo. Sobrescribir
-la IP reenviada evita confiar en cadenas `X-Forwarded-For` enviadas por el cliente.
-Configurar timeouts y límites de conexiones adicionales en el proxy al desplegar.
-
-Referencias: [proxies de confianza en FastAPI](https://fastapi.tiangolo.com/advanced/behind-a-proxy/),
-[módulo real IP de Nginx](https://nginx.org/en/docs/http/ngx_http_realip_module.html)
-y [cabeceras de Cloudflare](https://developers.cloudflare.com/fundamentals/reference/http-headers/).
+References: [Cloudflare Tunnel](https://developers.cloudflare.com/tunnel/), [Nginx WebSockets](https://nginx.org/en/docs/http/websocket.html), and [Uvicorn trusted proxies](https://www.uvicorn.org/settings/#http).

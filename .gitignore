@@ -22,6 +22,9 @@ Thumbs.db
 # Logs
 *.log
 /backups/
+*.sql
+*.dump
+*.backup
 /.tunnel-url
 
 # Local development files

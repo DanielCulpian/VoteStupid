@@ -5,6 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from app import __version__
 
 from app.infrastructure.security.api_protection import ApiProtection, RateLimiter, SafeAccessLog, allowed_origins
 from app.presentation.api.routes import router
@@ -25,7 +26,7 @@ async def validation_error(request: Request, error: RequestValidationError):
 
 def create_app() -> FastAPI:
     """Build an API with active protections and isolated state for each instance."""
-    application = FastAPI(title="VoteStupid", description="Votaciones anónimas para amigos.")
+    application = FastAPI(title="VoteStupid", version=__version__, description="Votaciones anónimas para amigos.")
     origins = allowed_origins()
     limiter = RateLimiter()
     application.state.rate_limiter = limiter
