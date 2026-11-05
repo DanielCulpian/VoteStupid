@@ -9,17 +9,17 @@ from app.infrastructure.realtime.connection_manager import ConnectionManager
 
 class Socket:
     def __init__(self, failure=None):
-        """Prepara un transporte controlado que registra mensajes o simula una desconexión."""
+        """Prepare a controlled transport that records messages or simulates disconnection."""
         self.messages = []
         self.accepted = False
         self.failure = failure
 
     async def accept(self):
-        """Registra la aceptación del transporte simulado."""
+        """Record acceptance of the mock transport."""
         self.accepted = True
 
     async def send_json(self, message):
-        """Captura el mensaje enviado o produce el fallo preparado por la prueba."""
+        """Capture the outgoing message or raise the configured test failure."""
         if self.failure:
             raise self.failure
         self.messages.append(message)
@@ -27,9 +27,9 @@ class Socket:
 
 @pytest.mark.parametrize("failure", [WebSocketDisconnect(), RuntimeError("closed"), OSError("broken pipe")])
 def test_failed_subscriber_does_not_prevent_delivery_to_others(failure):
-    """Retira clientes fallidos sin perder mensajes de los demás ni mezclar votaciones."""
+    """Verify failed subscriber does not prevent delivery to others."""
     async def scenario():
-        """Ejecuta conexiones, difusión y limpieza en un mismo bucle de eventos."""
+        """Run connection, broadcast, and cleanup within the same event loop."""
         manager = ConnectionManager()
         poll_id, other_id = uuid4(), uuid4()
         healthy, failed, other = Socket(), Socket(failure), Socket()

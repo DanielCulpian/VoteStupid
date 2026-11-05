@@ -2,16 +2,16 @@ const assert = require('node:assert/strict')
 const { test } = require('node:test')
 const { loadService } = require('./helpers/loadService.cjs')
 
-// Construye una respuesta HTTP simulada con el mismo formato JSON que la API.
+// Build a mock HTTP response using the API's JSON format.
 function jsonResponse(status, data) {
   return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } })
 }
 
-// Comprueba que una respuesta correcta conserva los datos y las cabeceras privadas de la petición.
+// Verify that successful responses preserve data and private request headers.
 test('devuelve los datos y conserva las cabeceras de administración', async () => {
   let received
   const { apiRequest } = loadService('api.ts', {
-    // Captura los argumentos enviados sin realizar ninguna conexión de red.
+    // Capture request arguments without making a network connection.
     fetch: async (url, options) => {
       received = { url, options }
       return jsonResponse(200, { id: 'poll-1' })
@@ -29,16 +29,16 @@ test('devuelve los datos y conserva las cabeceras de administración', async () 
   assert.ok(received.options.signal instanceof AbortSignal)
 })
 
-// Comprueba que una caída de red muestra una explicación en español y permite reintentar.
+// Verify that network failures show a Spanish explanation and allow retrying.
 test('traduce un fallo de conexión con el backend', async () => {
   const { apiRequest } = loadService('api.ts', {
-    // Simula el rechazo de fetch cuando el servidor no está disponible.
+    // Simulate fetch rejecting when the server is unavailable.
     fetch: async () => { throw new TypeError('Failed to fetch') },
   })
   await assert.rejects(apiRequest('/api/polls/poll-1'), /No se puede conectar con el servidor/)
 })
 
-// Comprueba los mensajes de enlace, permisos y servidor sin exponer sus detalles internos.
+// Check link, permission, and server error messages without exposing internal details.
 test('presenta errores HTTP comprensibles y conserva el código de estado', async () => {
   for (const [status, detail, expected] of [
     [404, 'Not Found', /No se ha encontrado la votación/],
@@ -48,11 +48,11 @@ test('presenta errores HTTP comprensibles y conserva el código de estado', asyn
     [409, 'La votación está cerrada.', /La votación está cerrada/],
   ]) {
     const { apiRequest, ApiError } = loadService('api.ts', {
-      // Devuelve el estado HTTP correspondiente a cada escenario de error.
+      // Return the HTTP status for each error scenario.
       fetch: async () => jsonResponse(status, { detail }),
     })
     await assert.rejects(apiRequest('/api/polls/poll-1'), error => {
-      // Verifica el tipo del error, su estado y el mensaje que recibirá la vista.
+      // Verify the error type, status, and message received by the view.
       assert.ok(error instanceof ApiError)
       assert.equal(error.status, status)
       assert.match(error.message, expected)
@@ -62,7 +62,7 @@ test('presenta errores HTTP comprensibles y conserva el código de estado', asyn
   }
 })
 
-// Comprueba que los errores de validación señalan el enlace o el campo sin mostrar texto técnico.
+// Verify that validation errors identify a link or field without technical wording.
 test('traduce los errores de validación de FastAPI', async () => {
   for (const [loc, expected] of [
     [['path', 'poll_id'], /enlace de la votación no es válido/],
@@ -72,42 +72,42 @@ test('traduce los errores de validación de FastAPI', async () => {
     [['body', 'campo_desconocido'], /Revisa los datos del formulario/],
   ]) {
     const { apiRequest } = loadService('api.ts', {
-      // Simula los detalles estructurados de una validación fallida.
+      // Simulate structured details from a failed validation.
       fetch: async () => jsonResponse(422, { detail: [{ loc, msg: 'Input should be valid' }] }),
     })
     await assert.rejects(apiRequest('/api/polls/incorrecto'), expected)
   }
 })
 
-// Comprueba que una respuesta ilegible no se trata como una operación correcta.
+// Verify that an unreadable response is not treated as a successful operation.
 test('rechaza una respuesta correcta que no contiene JSON válido', async () => {
   const { apiRequest } = loadService('api.ts', {
-    // Simula un proxy que responde con HTML en lugar de los datos de la votación.
+    // Simulate a proxy returning HTML instead of poll data.
     fetch: async () => new Response('<html>Error</html>', { status: 200 }),
   })
   await assert.rejects(apiRequest('/api/polls/poll-1'), /respuesta inesperada/)
 })
 
-// Comprueba que el tiempo límite se aplica tanto a la conexión como a la lectura del cuerpo.
+// Verify that the timeout covers both connection establishment and body reading.
 test('limita la espera a 15 segundos sin necesitar una espera real', async () => {
   for (const duringBody of [false, true]) {
     const controller = new AbortController()
     let timeoutDuration
     let notifyPending
-    // Permite cancelar la señal cuando la operación simulada ya está esperando.
+    // Allow cancelling the signal while the simulated operation is pending.
     const pendingStarted = new Promise(resolve => { notifyPending = resolve })
     const { apiRequest } = loadService('api.ts', {
       AbortSignal: {
-        // Proporciona una señal que la prueba puede cancelar de forma inmediata.
+        // Provide a signal that the test can cancel immediately.
         timeout: milliseconds => {
           timeoutDuration = milliseconds
           return controller.signal
         },
       },
-      // Simula una operación que no finaliza hasta que vence su señal de tiempo límite.
+      // Simulate an operation that remains pending until its timeout signal expires.
       fetch: async () => {
         const pending = () => new Promise((resolve, reject) => {
-          // Interrumpe la operación pendiente al agotarse el tiempo permitido.
+          // Interrupt the pending operation when its allowed time expires.
           controller.signal.addEventListener('abort', () => reject(controller.signal.reason), { once: true })
           notifyPending()
         })

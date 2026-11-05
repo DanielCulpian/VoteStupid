@@ -1,4 +1,4 @@
-# Activar explícitamente con scripts/tunnel.ps1; no se publica al arrancar en local.
+# Activate explicitly with scripts/tunnel.ps1; local startup does not publish the app.
 services:
   backend:
     environment:

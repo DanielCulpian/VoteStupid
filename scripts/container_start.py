@@ -1,4 +1,4 @@
-"""Prepara la conexión interna, aplica migraciones y arranca un único worker."""
+"""Prepare the internal connection, apply migrations, and start a single worker."""
 import os
 import sys
 
@@ -8,7 +8,7 @@ from sqlalchemy.engine import URL
 
 
 def main():
-    """Construye la URL sin interpolar secretos y detiene el arranque si falla Alembic."""
+    """Build the URL without interpolating secrets and abort startup if Alembic fails."""
     os.environ['DATABASE_URL'] = URL.create(
         'postgresql+psycopg', username='votestupid',
         password=os.environ['POSTGRES_PASSWORD'], host='db',

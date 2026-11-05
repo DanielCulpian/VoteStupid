@@ -17,7 +17,7 @@ $originFile = Join-Path $projectRoot '.env.tunnel'
 $urlFile = Join-Path $projectRoot '.tunnel-url'
 $namedMode = $Mode -eq 'named'
 
-# Ejecuta Compose y corta el flujo ante errores, sin mostrar la configuración privada.
+# Run Compose and abort on errors without displaying private configuration.
 function Invoke-TunnelCompose {
     param([string[]]$Arguments)
     $files = @('-f', 'compose.yaml', '-f', 'compose.tunnel.yaml')
@@ -33,7 +33,7 @@ try {
             throw 'Indica un hostname válido: .\scripts\tunnel.ps1 start -Hostname votestupid.tudominio.es'
         }
         $initialOrigin = if ($namedMode) { 'https://' + $Hostname.ToLowerInvariant() } else { 'https://unconfigured.invalid' }
-        # Detiene el enlace anterior antes de generar otro; nunca modifica el .env privado.
+        # Stop the previous link before creating another; never modify the private .env.
         if (-not (Test-Path -LiteralPath $originFile)) {
             Set-Content -LiteralPath $originFile -Value 'DOCKER_PUBLIC_ORIGIN=https://unconfigured.invalid' -Encoding ASCII
         }
@@ -62,7 +62,7 @@ try {
             Write-Host "Administración: $publicUrl/acceso"
             Write-Host 'Para desconectarlo: .\scripts\tunnel.ps1 stop'
         } catch {
-            # Un arranque incompleto no debe dejar la aplicación publicada.
+            # Do not leave the application published after an incomplete startup.
             & $dockerPath compose --env-file .env --env-file .env.tunnel -f compose.yaml -f compose.tunnel.yaml stop cloudflared
             throw
         }

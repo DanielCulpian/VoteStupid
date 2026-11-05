@@ -19,7 +19,7 @@ let timer: ReturnType<typeof setTimeout> | undefined
 let expiry: ReturnType<typeof setTimeout> | undefined
 const filtered = computed(() => state.value !== 'all' || type.value !== '')
 
-// Descarta respuestas antiguas y conserva las tarjetas al fallar una actualización.
+// Discard stale responses and retain cards if a refresh fails.
 async function load(more = false, isCurrent = () => true) {
   if (disposed) return
   const requestVersion = ++version
@@ -39,16 +39,16 @@ async function load(more = false, isCurrent = () => true) {
   }
 }
 
-// Evita rechazos sin gestionar en acciones iniciadas por la interfaz.
+// Handle rejected promises from actions initiated by the interface.
 function refresh() { void load().catch(() => {}) }
 
-// Agrupa eventos de estado consecutivos para no duplicar peticiones.
+// Debounce consecutive state events to avoid duplicate requests.
 function queueRefresh() {
   clearTimeout(timer)
   timer = setTimeout(refresh, 200)
 }
 
-// Sustituye el transporte actual y cancela sus reintentos antes de reconectar manualmente.
+// Replace the transport and cancel its retries before reconnecting manually.
 function reconnect() {
   socket?.close()
   if (disposed) return
@@ -57,24 +57,24 @@ function reconnect() {
   })
 }
 
-// Actualiza las tarjetas cuando alcanza su fecha de cierre aunque no haya un evento nuevo.
+// Refresh cards when their closing deadline is reached, even without a new event.
 function scheduleExpiry() {
   clearTimeout(expiry)
   const dates = items.value.filter(p => p.is_active && p.closes_at && Date.parse(p.closes_at) > Date.now()).map(p => Date.parse(p.closes_at!))
   if (dates.length) expiry = setTimeout(refresh, Math.min(2147483647, Math.max(50, Math.min(...dates) - Date.now() + 50)))
 }
 
-// Restablece conjuntamente los filtros sin recargar la página.
+// Reset both filters without reloading the page.
 function clearFilters() { state.value = 'all'; type.value = '' }
 
-// Mantiene una sola suscripción y recupera el catálogo después de cada reconexión.
+// Maintain one subscription and refresh the catalog after each reconnection.
 onMounted(() => {
   refresh()
   reconnect()
 })
-// Evita presentar tarjetas de otro filtro cuando la nueva consulta falla.
+// Clear cards from the previous filter before requesting new results.
 const stopFilters = watch([state, type], () => { items.value = []; total.value = 0; refresh() })
-// Cancela respuestas pendientes, temporizadores y suscripción al abandonar el catálogo.
+// Cancel pending responses, timers, and subscriptions when leaving the catalog.
 onUnmounted(() => { disposed = true; version++; stopFilters(); socket?.close(); clearTimeout(timer); clearTimeout(expiry) })
 </script>
 

@@ -23,7 +23,7 @@ from app.infrastructure.models.vote_selection_model import VoteSelectionModel
 class SqlAlchemyPollRepository(PollRepository):
 
     def list_polls(self, state="all", poll_type=None, offset=0, limit=24):
-        """Filtra y ordena primero abiertas y después recientes, considerando el cierre programado."""
+        """Filter and sort open polls first, then recent polls, respecting scheduled closing times."""
         active = and_(PollModel.is_active.is_(True), or_(PollModel.closes_at.is_(None), PollModel.closes_at > datetime.now(timezone.utc)))
         filters = []
         if state != "all":
@@ -37,11 +37,11 @@ class SqlAlchemyPollRepository(PollRepository):
         return [poll_to_entity(row) for row in rows], total
 
     def __init__(self, session: Session):
-        """Asocia el repositorio a la sesión SQLAlchemy recibida."""
+        """Bind the repository to the supplied SQLAlchemy session."""
         self.session = session
 
     def _commit(self) -> None:
-        """Confirma la transacción y la revierte si se produce un error."""
+        """Commit the transaction and roll it back if an error occurs."""
         try:
             self.session.commit()
         except Exception:
@@ -49,7 +49,7 @@ class SqlAlchemyPollRepository(PollRepository):
             raise
 
     def get_by_id(self, poll_id: UUID) -> Poll | None:
-        """Obtiene una votación por su identificador o devuelve None si no existe."""
+        """Retrieve a poll by its identifier, or return None if it does not exist."""
         statement = (
             select(PollModel)
             .options(selectinload(PollModel.options))
@@ -68,7 +68,7 @@ class SqlAlchemyPollRepository(PollRepository):
         poll_id: UUID,
         voter_token_hash: str
     ) -> Vote | None:
-        """Busca el voto de un participante mediante la votación y el hash de su token."""
+        """Find a participant's vote using the poll and the hash of their token."""
         statement = (
             select(VoteModel)
             .options(selectinload(VoteModel.selections))
@@ -86,7 +86,7 @@ class SqlAlchemyPollRepository(PollRepository):
         return vote_to_entity(vote_model)
 
     def save_vote(self, vote: Vote) -> None:
-        """Guarda el voto y convierte un duplicado concurrente en un conflicto de participación."""
+        """Save a vote and convert concurrent duplicates into an already-voted conflict."""
         vote_model = vote_to_model(vote)
         self.session.add(vote_model)
         try:
@@ -97,7 +97,7 @@ class SqlAlchemyPollRepository(PollRepository):
             raise
 
     def update_vote(self, vote: Vote) -> None:
-        """Sustituye las selecciones del voto existente y guarda su fecha de modificación."""
+        """Replace the existing vote selections and persist the modification timestamp."""
         statement = (
             select(VoteModel)
             .options(selectinload(VoteModel.selections))
@@ -109,11 +109,11 @@ class SqlAlchemyPollRepository(PollRepository):
         if vote_model is None:
             raise ValueError("El voto que se intenta actualizar no existe.")
 
-        # Eliminamos las selecciones anteriores y guardamos ese cambio.
+        # Delete the previous selections and persist that change.
         vote_model.selections.clear()
         self.session.flush()
 
-        # Creamos las nuevas selecciones sobre el voto existente.
+        # Create the new selections on the existing vote.
         vote_model.selections = [
             VoteSelectionModel(
                 option_id=option_id,
@@ -131,7 +131,7 @@ class SqlAlchemyPollRepository(PollRepository):
         poll_id: UUID,
         option_ids: list[UUID]
     ) -> list[UUID]:
-        """Devuelve los identificadores solicitados que pertenecen a la votación, en su orden."""
+        """Return the requested identifiers that belong to the poll, in their original order."""
         if not option_ids:
             return []
 
@@ -149,7 +149,7 @@ class SqlAlchemyPollRepository(PollRepository):
         ]
 
     def update_poll(self, poll: Poll) -> None:
-        """Actualiza la votación y sus opciones sin eliminar opciones que tengan votos."""
+        """Update a poll and its options without deleting options that have votes."""
         statement = (
             select(PollModel)
             .options(selectinload(PollModel.options))
@@ -215,13 +215,13 @@ class SqlAlchemyPollRepository(PollRepository):
         self._commit()
 
     def save_poll(self, poll: Poll) -> None:
-        """Guarda una nueva votación con sus opciones."""
+        """Persist a new poll and its options."""
         poll_model = poll_to_model(poll)
         self.session.add(poll_model)
         self._commit()
 
     def get_votes_by_poll(self, poll_id: UUID) -> list[Vote]:
-        """Obtiene los votos de una votación con sus selecciones ordenadas."""
+        """Retrieve a poll's votes with their selections in order."""
         statement = (
             select(VoteModel)
             .options(selectinload(VoteModel.selections))

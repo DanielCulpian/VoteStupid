@@ -8,27 +8,27 @@ from app.domain.repositories.poll_repository import PollRepository
 class ReopenPoll:
 
     def __init__(self, poll_repository: PollRepository):
-        """Recibe las dependencias necesarias para ejecutar el caso de uso."""
+        """Receive the dependencies required to execute the use case."""
         self.poll_repository = poll_repository
 
     def execute(self, poll_id: UUID) -> Poll:
-        """Marca la votación como abierta y guarda el cambio."""
+        """Mark the poll as open and persist the change."""
 
-        # 1. Buscar la votación
+        # 1. Find the poll
         poll = self.poll_repository.get_by_id(poll_id)
 
-        # 2. Comprobar si existe
+        # 2. Check whether the poll exists
         if poll is None:
             raise ValueError("La votación no existe.")
 
-        # 3. Reabrir la votación
+        # 3. Reopen the poll
         poll.is_active = True
-        # Una reapertura explícita retira un plazo ya vencido para permitir votar otra vez.
+        # Explicitly reopening a poll removes an expired deadline so voting can resume.
         if poll.closes_at is not None and poll.closes_at <= datetime.now(timezone.utc):
             poll.closes_at = None
 
-        # 4. Guardar los cambios
+        # 4. Save the changes
         self.poll_repository.update_poll(poll)
 
-        # 5. Devolver la votación
+        # 5. Return the poll
         return poll

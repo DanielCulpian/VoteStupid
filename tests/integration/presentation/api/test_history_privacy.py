@@ -11,7 +11,7 @@ from app.presentation.api.dependencies import get_poll_repository
 
 @pytest.fixture
 def history_client(db_session):
-    """Proporciona la API real con un repositorio conectado exclusivamente a la base de pruebas."""
+    """Provide the real API with a repository connected only to the test database."""
     repository = SqlAlchemyPollRepository(db_session)
     app.dependency_overrides[get_poll_repository] = lambda: repository
     try:
@@ -23,7 +23,7 @@ def history_client(db_session):
 
 @pytest.mark.parametrize("poll_type", ["single_choice", "multiple_choice", "ranking"])
 def test_public_history_queries_do_not_expose_admin_credentials(history_client, poll_type):
-    """Comprueba que las consultas reutilizadas por el histórico no revelan tokens ni hashes."""
+    """Verify public history queries do not expose admin credentials."""
     creation = history_client.post("/api/polls", json={
         "title": "Votación privada del organizador",
         "option_texts": ["A", "B"],
@@ -41,13 +41,13 @@ def test_public_history_queries_do_not_expose_admin_credentials(history_client, 
 
 
 def test_history_does_not_add_a_public_poll_directory(history_client):
-    """Comprueba que no hay un listado global público de votaciones ni de administraciones."""
+    """Verify history does not add a public poll directory."""
     assert history_client.get("/api/polls").status_code == 200
     assert history_client.get("/api/admin/polls").status_code == 200
 
 
 def test_closed_poll_and_results_survive_new_connections_and_app_lifecycle(db_session, test_engine):
-    """Recupera una votación cerrada, sus resultados y su acceso privado tras recrear API y conexiones."""
+    """Verify closed poll and results survive new connections and app lifecycle."""
     repository = SqlAlchemyPollRepository(db_session)
     app.dependency_overrides[get_poll_repository] = lambda: repository
     try:

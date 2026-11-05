@@ -59,14 +59,14 @@ const router = createRouter({
   ],
 })
 
-// Revalida la cookie antes de cada entrada privada; nunca utiliza un token de URL como sesión.
+// Revalidate the cookie before entering a private route; URL tokens are not sessions.
 router.beforeEach(async to => {
   if (!to.meta.private) return true
   try { await getSession(); return true }
   catch { return { path: '/acceso', query: { redirect: to.path } } }
 })
 
-// Retira la vista administrativa cuando el servidor informa de una sesión caducada.
+// Leave the administrative view when the server reports an expired session.
 window.addEventListener('admin-session-expired', () => {
   if (router.currentRoute.value.meta.private) void router.replace({ path: '/acceso', query: { redirect: router.currentRoute.value.path } })
 })

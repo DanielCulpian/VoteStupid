@@ -8,13 +8,13 @@ const poll = {
   options: [{ id: 'a', text: 'Opción A' }, { id: 'b', text: 'Opción B' }],
 }
 
-// Comprueba que una petición lenta no admite otro envío ni cambios en las opciones del formulario.
+// Verify that slow requests block duplicate submissions and form option changes.
 test('bloquea la creación duplicada mientras la petición está pendiente', async () => {
   const request = deferred()
   let calls = 0
   const view = loadView('CreatePollView.vue', {
     '../services/pollService': {
-      // Mantiene la creación pendiente para comprobar el bloqueo de los controles.
+      // Keep creation pending to verify that controls remain disabled.
       createPoll: () => { calls++; return request.promise },
     },
   })
@@ -33,12 +33,12 @@ test('bloquea la creación duplicada mientras la petición está pendiente', asy
   assert.equal(view.createdPoll.value.id, poll.id)
 })
 
-// Comprueba que la validación y un fallo de red conservan los datos y permiten corregir o reintentar.
+// Verify that validation and network failures preserve form data and allow retries.
 test('recupera el formulario tras datos inválidos y tras una creación fallida', async () => {
   let calls = 0
   const view = loadView('CreatePollView.vue', {
     '../services/pollService': {
-      // Simula una caída inicial y la recuperación posterior del servidor.
+      // Simulate an initial server failure followed by recovery.
       createPoll: async () => {
         calls++
         if (calls === 1) throw new Error('No se puede conectar con el servidor.')
@@ -62,7 +62,7 @@ test('recupera el formulario tras datos inválidos y tras una creación fallida'
   assert.equal(view.createdPoll.value.id, poll.id)
 })
 
-// Comprueba el bloqueo durante el envío y que un fallo al cargar resultados no invalida el voto guardado.
+// Verify submission locking and that results failures do not invalidate a saved vote.
 test('registra y actualiza el voto sin envíos duplicados ni confirmaciones contradictorias', async () => {
   const request = deferred()
   let casts = 0
@@ -70,24 +70,24 @@ test('registra y actualiza el voto sin envíos duplicados ni confirmaciones cont
   let failResults = false
   const view = loadView('PollView.vue', {
     '../services/pollService': {
-      // Devuelve una votación abierta con dos opciones para la interacción.
+      // Return an open poll with two options for interaction.
       getPoll: async () => ({ ...poll }),
     },
     '../services/voteService': {
-      // Conserva el envío pendiente para intentar votar de nuevo antes de finalizar.
+      // Keep submission pending to attempt another vote before completion.
       castVote: () => { casts++; return request.promise },
-      // Registra las actualizaciones posteriores al primer voto confirmado.
+      // Record updates after the first confirmed vote.
       updateVote: async () => { updates++ },
     },
     '../services/resultsService': {
-      // Permite aislar los errores de resultados de la confirmación del voto.
+      // Isolate results errors from vote confirmation.
       getPollResults: async () => {
         if (failResults) throw new Error('No se pueden cargar los resultados.')
         return { total_votes: 0, results: [] }
       },
     },
     '../services/websocketService': {
-      // Evita conexiones externas al probar únicamente la lógica de envío.
+      // Prevent external connections when testing submission logic only.
       connectToPoll: () => ({ close() {} }),
     },
   })
@@ -112,28 +112,28 @@ test('registra y actualiza el voto sin envíos duplicados ni confirmaciones cont
   assert.match(view.successMessage.value, /actualizado/)
 })
 
-// Comprueba que un error administrativo deja el panel disponible y que los reintentos no se duplican.
+// Verify that administrative errors leave the panel usable and do not duplicate retries.
 test('conserva la administración y permite cerrar y reabrir tras un fallo', async () => {
   const closeRequest = deferred()
   let closes = 0
   const view = loadView('AdminView.vue', {
     '../services/adminService': {
-      // Proporciona una votación cuyo acceso privado ya ha sido validado.
+      // Provide a poll whose private access has already been validated.
       getAdminPoll: async () => ({ ...poll }),
-      // Simula un primer cierre fallido y permite otro cierre posterior.
+      // Simulate a failed first closure and allow a later successful attempt.
       closePoll: () => {
         closes++
         return closes === 1 ? closeRequest.promise : Promise.resolve({ ...poll, is_active: false })
       },
-      // Devuelve el estado abierto que confirma la reapertura.
+      // Return the open state that confirms reopening.
       reopenPoll: async () => ({ ...poll, is_active: true }),
     },
     '../services/resultsService': {
-      // Simula un error independiente que no debe impedir administrar la votación.
+      // Simulate an independent error that must not prevent poll administration.
       getPollResults: async () => { throw new Error('No se pueden cargar los resultados.') },
     },
     '../services/websocketService': {
-      // Aísla la prueba de operaciones administrativas del transporte WebSocket.
+      // Isolate administrative operation tests from WebSocket transport.
       connectToPoll: () => ({ close() {} }),
     },
   })
@@ -158,31 +158,31 @@ test('conserva la administración y permite cerrar y reabrir tras un fallo', asy
   assert.match(view.successMessage.value, /se ha reabierto/)
 })
 
-// Comprueba ambas vistas con datos cambiados durante el corte y limpieza al navegar.
+// Check both views with changes made during disconnection and cleanup on navigation.
 for (const filename of ['PollView.vue', 'AdminView.vue']) {
   test(`${filename}: recupera resultados y estado sin perder selecciones y cancela al salir`, async () => {
     let callbacks, unmount, closed = 0
     let current = { ...poll }, total = 0
     const view = loadView(filename, {
       '../services/pollService': {
-        // Devuelve el estado actual que pudo cambiar durante la desconexion.
+        // Return the current state, which may have changed during disconnection.
         getPoll: async () => ({ ...current }),
       },
       '../services/adminService': {
-        // Simula la revalidacion del token administrativo de la sesion.
+        // Simulate revalidating the session's administration token.
         getAdminPoll: async () => ({ ...current }),
       },
       '../services/voteService': {},
       '../services/resultsService': {
-        // Devuelve los votos emitidos por otro cliente durante el corte.
+        // Return votes submitted by another client during disconnection.
         getPollResults: async () => ({ total_votes: total, results: [] }),
       },
       '../services/websocketService': {
-        // Captura los eventos para ejercitar la sincronizacion real de la vista.
+        // Capture events to exercise the view's real synchronization logic.
         connectToPoll: (...args) => { callbacks = args; return { close() { closed++ } } },
       },
     }, {
-      // Conserva la limpieza registrada por Vue para simular el cambio de pagina.
+      // Retain Vue's cleanup callback to simulate leaving the page.
       captureUnmount: callback => { unmount = callback },
     })
     await (filename === 'PollView.vue' ? view.loadPoll() : view.loadAdminPanel())

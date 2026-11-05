@@ -9,7 +9,7 @@ from app.domain.repositories.poll_repository import PollRepository
 class ValidateVoteSelection:
 
     def __init__(self, poll_repository: PollRepository):
-        """Recibe las dependencias necesarias para ejecutar el caso de uso."""
+        """Receive the dependencies required to execute the use case."""
         self.poll_repository = poll_repository
 
     def execute(
@@ -17,17 +17,17 @@ class ValidateVoteSelection:
         poll: Poll,
         selected_option_ids: list[UUID]
     ) -> None:
-        """Comprueba pertenencia, duplicados y límites de las opciones según el tipo de votación."""
+        """Check option ownership, duplicates, and selection limits for the poll type."""
 
-        # 1. Comprobar que se ha seleccionado alguna opción
+        # 1. Check that at least one option was selected
         if not selected_option_ids:
             raise VoteRuleError("Debes seleccionar al menos una opción.")
 
-        # 2. Comprobar que no hay opciones duplicadas
+        # 2. Check for duplicate options
         if len(selected_option_ids) != len(set(selected_option_ids)):
             raise VoteRuleError("No puedes seleccionar una opción varias veces.")
 
-        # 3. Comprobar que las opciones pertenecen a la votación
+        # 3. Check that the options belong to the poll
         valid_option_ids = self.poll_repository.get_options_by_ids(
             poll.id,
             selected_option_ids
@@ -38,7 +38,7 @@ class ValidateVoteSelection:
                 "Una o varias opciones no pertenecen a esta votación."
             )
 
-        # 4. Validar según el tipo de votación
+        # 4. Validate the selection for the poll type
         if poll.poll_type == PollType.SINGLE_CHOICE:
             if len(selected_option_ids) != 1:
                 raise VoteRuleError(

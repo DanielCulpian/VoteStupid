@@ -9,7 +9,7 @@ const busy = ref(false)
 const route = useRoute()
 const router = useRouter()
 
-// Inicia sesión sin guardar la contraseña y permite únicamente redirecciones administrativas locales.
+// Log in without storing the password and allow only local administrative redirects.
 async function submit() {
   if (busy.value) return
   busy.value = true; error.value = ''

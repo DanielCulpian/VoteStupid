@@ -13,20 +13,20 @@ from app.domain.entities.poll_type import PollType
 class FakePollRepository:
 
     def get_options_by_ids(self, poll_id, option_ids):
-        """Simula la consulta de opciones que utiliza este escenario de validación."""
+        """Simulate the option lookup used by this validation scenario."""
         return option_ids
 
     def save_poll(self, poll):
-        """Guarda la votación en el repositorio simulado."""
+        """Save the poll in the mock repository."""
         self.polls[poll.id] = poll
 
     def get_votes_by_poll(self, poll_id: UUID) -> list[Vote]:
-        """Simula una consulta sin resultados para este escenario de prueba."""
+        """Simulate an empty query result for this test scenario."""
         return []
 
 
 def create_poll(poll_type, max_selections=None):
-    """Construye una votación y sus opciones para preparar el escenario de prueba."""
+    """Build a poll and its options for the test scenario."""
     options = [
         Option(text="Opción A"),
         Option(text="Opción B"),
@@ -44,7 +44,7 @@ def create_poll(poll_type, max_selections=None):
 
 
 def test_validate_vote_selection_rejects_empty_selection():
-    """Comprueba que la validación de selecciones rechaza una selección vacía."""
+    """Verify validate vote selection rejects empty selection."""
     poll, options = create_poll(PollType.SINGLE_CHOICE)
 
     validator = ValidateVoteSelection(FakePollRepository())
@@ -60,7 +60,7 @@ def test_validate_vote_selection_rejects_empty_selection():
 
 
 def test_validate_vote_selection_rejects_duplicate_options():
-    """Comprueba que la validación de selecciones rechaza opciones repetidas."""
+    """Verify validate vote selection rejects duplicate options."""
     poll, options = create_poll(PollType.MULTIPLE_CHOICE)
 
     validator = ValidateVoteSelection(FakePollRepository())
@@ -79,14 +79,14 @@ def test_validate_vote_selection_rejects_duplicate_options():
 
 
 def test_validate_vote_selection_rejects_options_from_another_poll():
-    """Comprueba que la validación de selecciones rechaza opciones de otra votación."""
+    """Verify validate vote selection rejects options from another poll."""
     poll, options = create_poll(PollType.MULTIPLE_CHOICE)
 
     validator = ValidateVoteSelection(FakePollRepository())
 
     class FakeRepositoryWithInvalidOptions:
         def get_options_by_ids(self, poll_id, option_ids):
-            """Simula la consulta de opciones que utiliza este escenario de validación."""
+            """Simulate the option lookup used by this validation scenario."""
             return [options[0].id]
 
     validator = ValidateVoteSelection(FakeRepositoryWithInvalidOptions())
@@ -105,7 +105,7 @@ def test_validate_vote_selection_rejects_options_from_another_poll():
 
 
 def test_validate_vote_selection_rejects_multiple_options_in_single_choice():
-    """Comprueba que la validación de selecciones rechaza varias opciones en elección única."""
+    """Verify validate vote selection rejects multiple options in single choice."""
     poll, options = create_poll(PollType.SINGLE_CHOICE)
 
     validator = ValidateVoteSelection(FakePollRepository())
@@ -124,7 +124,7 @@ def test_validate_vote_selection_rejects_multiple_options_in_single_choice():
 
 
 def test_validate_vote_selection_rejects_exceeding_max_selections():
-    """Comprueba que la validación de selecciones rechaza superar el máximo de selecciones."""
+    """Verify validate vote selection rejects exceeding max selections."""
     poll, options = create_poll(
         PollType.MULTIPLE_CHOICE,
         max_selections=2
@@ -147,7 +147,7 @@ def test_validate_vote_selection_rejects_exceeding_max_selections():
 
 
 def test_validate_vote_selection_allows_multiple_options_without_limit():
-    """Comprueba que la validación de selecciones permite varias opciones cuando no se ha fijado un límite."""
+    """Verify validate vote selection allows multiple options without limit."""
     poll, options = create_poll(PollType.MULTIPLE_CHOICE)
 
     validator = ValidateVoteSelection(FakePollRepository())
@@ -163,7 +163,7 @@ def test_validate_vote_selection_allows_multiple_options_without_limit():
 
 
 def test_validate_vote_selection_rejects_incomplete_ranking():
-    """Comprueba que la validación de selecciones rechaza un ranking incompleto."""
+    """Verify validate vote selection rejects incomplete ranking."""
     poll, options = create_poll(PollType.RANKING)
 
     validator = ValidateVoteSelection(FakePollRepository())
@@ -182,7 +182,7 @@ def test_validate_vote_selection_rejects_incomplete_ranking():
 
 
 def test_validate_vote_selection_accepts_complete_ranking():
-    """Comprueba que la validación de selecciones acepta un ranking completo."""
+    """Verify validate vote selection accepts complete ranking."""
     poll, options = create_poll(PollType.RANKING)
 
     validator = ValidateVoteSelection(FakePollRepository())

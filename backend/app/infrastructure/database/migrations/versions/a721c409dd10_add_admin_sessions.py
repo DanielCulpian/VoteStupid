@@ -1,4 +1,4 @@
-"""Añade sesiones administrativas revocables sin guardar sus secretos originales."""
+"""Add revocable administrator sessions without storing their original secrets."""
 from alembic import op
 import sqlalchemy as sa
 
@@ -9,7 +9,7 @@ depends_on = None
 
 
 def upgrade():
-    """Crea la tabla de sesiones y el índice de caducidad."""
+    """Create the session table and expiration index."""
     op.create_table("admin_sessions", sa.Column("token_hash", sa.String(64), primary_key=True),
                     sa.Column("credential_version", sa.String(64), nullable=False),
                     sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False))
@@ -17,6 +17,6 @@ def upgrade():
 
 
 def downgrade():
-    """Retira exclusivamente las sesiones administrativas."""
+    """Remove only administrator sessions."""
     op.drop_index("ix_admin_sessions_expires_at", table_name="admin_sessions")
     op.drop_table("admin_sessions")

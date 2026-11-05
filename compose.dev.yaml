@@ -1,4 +1,4 @@
-# Opcional: solo para ejecutar backend/pytest desde el host, fuera de Docker.
+# Optional: expose PostgreSQL only when running backend/pytest on the host.
 services:
   db:
     networks: [internal, edge]

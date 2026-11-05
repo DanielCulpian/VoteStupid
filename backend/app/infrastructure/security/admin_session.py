@@ -16,7 +16,7 @@ COOKIE_NAME = "votestupid_admin"
 
 
 def password_hash(password: str, salt: str | None = None) -> str:
-    """Calcula scrypt con sal aleatoria sin conservar la contraseña original."""
+    """Calculate scrypt with a random salt without retaining the original password."""
     salt = salt or secrets.token_hex(16)
     digest = hashlib.scrypt(password.encode(), salt=bytes.fromhex(salt), n=32768, r=8, p=3,
                             maxmem=64 * 1024 * 1024, dklen=32).hex()
@@ -24,12 +24,12 @@ def password_hash(password: str, salt: str | None = None) -> str:
 
 
 def credential_version() -> str:
-    """Identifica la configuración para invalidar sesiones al cambiar la contraseña."""
+    """Identify the credential configuration to invalidate sessions after a password change."""
     return hashlib.sha256(os.getenv("ADMIN_PASSWORD_HASH", "").encode()).hexdigest()
 
 
 def verify_password(password: str) -> bool:
-    """Verifica un hash configurado y falla de forma cerrada si falta o está mal formado."""
+    """Verify the configured hash and fail closed when it is missing or malformed."""
     configured = os.getenv("ADMIN_PASSWORD_HASH", "")
     if not re.fullmatch(r"scrypt\$[0-9a-f]{32}\$[0-9a-f]{64}", configured):
         raise HTTPException(503, "El acceso privado no está configurado. Contacta con el administrador.")
@@ -37,17 +37,17 @@ def verify_password(password: str) -> bool:
 
 
 def session_hash(token: str) -> str:
-    """Obtiene la clave de búsqueda sin almacenar el secreto de la cookie."""
+    """Derive the lookup key without storing the cookie secret."""
     return hashlib.sha256(token.encode()).hexdigest()
 
 
 def secure_cookie() -> bool:
-    """Mantiene Secure activado salvo habilitación explícita del desarrollo local HTTP."""
+    """Keep Secure enabled unless local HTTP development is explicitly allowed."""
     return os.getenv("ADMIN_COOKIE_SECURE", "true").lower() != "false"
 
 
 def protect_admin_request(request: Request):
-    """Exige una cabecera no simple y un origen autorizado en operaciones administrativas."""
+    """Require a non-simple header and an authorized origin for administrative writes."""
     if request.method not in {"GET", "HEAD", "OPTIONS"}:
         origin = request.headers.get("origin")
         if request.headers.get("X-Requested-With") != "VoteStupid" or (origin and origin not in allowed_origins()):
@@ -55,14 +55,14 @@ def protect_admin_request(request: Request):
 
 
 def session_db():
-    """Proporciona una sesión SQL independiente para autenticar y revocar sesiones."""
+    """Provide an independent SQL session for authenticating and revoking sessions."""
     from app.infrastructure.database.session import SessionLocal
     with SessionLocal() as db:
         yield db
 
 
 def require_admin_session(request: Request, db: Session = Depends(session_db)) -> AdminSessionModel:
-    """Autoriza únicamente cookies vigentes y ligadas a la contraseña actual."""
+    """Authorize only unexpired cookies associated with the current password."""
     protect_admin_request(request)
     token = request.cookies.get(COOKIE_NAME, "")
     if not re.fullmatch(r"[A-Za-z0-9_-]{43}", token):
@@ -74,7 +74,7 @@ def require_admin_session(request: Request, db: Session = Depends(session_db)) -
 
 
 def create_session(request: Request, db: Session) -> tuple[str, datetime]:
-    """Rota la sesión, elimina las caducadas y limita el número de sesiones almacenadas."""
+    """Rotate the session, prune expired entries, and bound the number of stored sessions."""
     now = datetime.now(timezone.utc)
     old = request.cookies.get(COOKIE_NAME, "")
     db.execute(delete(AdminSessionModel).where(AdminSessionModel.expires_at <= now))

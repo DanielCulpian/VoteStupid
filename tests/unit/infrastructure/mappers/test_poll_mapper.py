@@ -5,7 +5,7 @@ from app.infrastructure.mappers.poll_mapper import to_model
 from app.infrastructure.mappers.poll_mapper import to_model, to_entity
 
 def test_to_model_converts_poll_and_options():
-    """Comprueba la conversión de una votación y sus opciones a modelos SQLAlchemy."""
+    """Verify to model converts poll and options."""
     option_1 = Option(text="Matrix")
     option_2 = Option(text="Interestelar")
 
@@ -29,7 +29,7 @@ def test_to_model_converts_poll_and_options():
     assert result.options[1].text == "Interestelar"
 
 def test_to_entity_converts_model_and_options():
-    """Comprueba la conversión de modelos SQLAlchemy en una votación con opciones."""
+    """Verify to entity converts model and options."""
     option_1 = Option(text="Matrix")
     option_2 = Option(text="Interestelar")
 

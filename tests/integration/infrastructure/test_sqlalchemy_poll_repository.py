@@ -12,8 +12,8 @@ from app.domain.entities.vote import Vote
 from uuid import uuid4
 
 def test_save_and_get_poll(db_session):
-    """Comprueba que SQLAlchemy guarda y recupera una votación con sus opciones."""
-    # Arrange: preparamos una votación.
+    """Verify save and get poll."""
+    # Arrange: prepare a poll.
     poll = Poll(
         title="¿Qué película vemos?",
         description="Votación del sábado",
@@ -26,11 +26,11 @@ def test_save_and_get_poll(db_session):
 
     repository = SqlAlchemyPollRepository(db_session)
 
-    # Act: guardamos y recuperamos la votación.
+    # Act: save and retrieve the poll.
     repository.save_poll(poll)
     result = repository.get_by_id(poll.id)
 
-    # Assert: comprobamos los datos recuperados.
+    # Assert: check the retrieved data.
     assert result is not None
     assert result.id == poll.id
     assert result.title == "¿Qué película vemos?"
@@ -43,7 +43,7 @@ def test_save_and_get_poll(db_session):
     assert result.options[1].text == "Interestelar"
 
 def test_save_and_get_vote(db_session):
-    """Comprueba que SQLAlchemy guarda y recupera un voto con sus selecciones."""
+    """Verify save and get vote."""
     poll = Poll(
         title="¿Qué película vemos?",
         poll_type=PollType.RANKING,
@@ -85,7 +85,7 @@ def test_save_and_get_vote(db_session):
     ]
 
 def test_update_vote(db_session):
-    """Comprueba que SQLAlchemy sustituye las selecciones y conserva la identidad del voto."""
+    """Verify update vote."""
     poll = Poll(
         title="¿Qué película vemos?",
         poll_type=PollType.RANKING,
@@ -130,7 +130,7 @@ def test_update_vote(db_session):
     assert result.selected_option_ids == new_selection
 
 def test_update_poll(db_session):
-    """Comprueba que SQLAlchemy guarda los cambios de la votación."""
+    """Verify update poll."""
     poll = Poll(
         title="Votación original",
         poll_type=PollType.SINGLE_CHOICE,
@@ -155,7 +155,7 @@ def test_update_poll(db_session):
     assert result.options[0].text == "Opción modificada"
 
 def test_get_options_by_ids(db_session):
-    """Comprueba que el repositorio filtra las opciones de la votación y conserva su orden."""
+    """Verify get options by ids."""
     poll = Poll(
         title="Votación de prueba",
         poll_type=PollType.SINGLE_CHOICE,
@@ -185,7 +185,7 @@ def test_get_options_by_ids(db_session):
     ]
 
 def test_get_vote_by_voter_returns_none_when_not_found(db_session):
-    """Comprueba que la búsqueda del voto del participante devuelve None cuando no encuentra el voto."""
+    """Verify get vote by voter returns none when not found."""
     repository = SqlAlchemyPollRepository(db_session)
 
     result = repository.get_vote_by_voter(
@@ -196,7 +196,7 @@ def test_get_vote_by_voter_returns_none_when_not_found(db_session):
     assert result is None
 
 def test_update_poll_rejects_removing_option_with_votes(db_session):
-    """Comprueba que la actualización de votaciones impide eliminar una opción con votos asociados."""
+    """Verify update poll rejects removing option with votes."""
     poll = Poll(
         title="Votación histórica",
         poll_type=PollType.SINGLE_CHOICE,
@@ -226,7 +226,7 @@ def test_update_poll_rejects_removing_option_with_votes(db_session):
     with pytest.raises(ValueError, match="No se pueden eliminar opciones"):
         repository.update_poll(updated_poll)
 
-    # El voto histórico debe seguir existiendo.
+    # The historical vote must still exist.
     result = repository.get_vote_by_voter(
         poll.id,
         "hash_historico"
@@ -236,7 +236,7 @@ def test_update_poll_rejects_removing_option_with_votes(db_session):
     assert result.selected_option_ids == [poll.options[0].id]
 
 def test_get_votes_by_poll_returns_empty_list_when_no_votes(db_session):
-    """Comprueba que la consulta de votos de una votación devuelve una lista vacía si no hay votos."""
+    """Verify get votes by poll returns empty list when no votes."""
     poll = Poll(
         title="Votación sin participantes",
         poll_type=PollType.SINGLE_CHOICE,
@@ -255,7 +255,7 @@ def test_get_votes_by_poll_returns_empty_list_when_no_votes(db_session):
 
 
 def test_get_votes_by_poll_returns_all_votes(db_session):
-    """Comprueba que la consulta de votos de una votación devuelve todos los votos asociados."""
+    """Verify get votes by poll returns all votes."""
     poll = Poll(
         title="¿Qué película vemos?",
         poll_type=PollType.SINGLE_CHOICE,
@@ -303,7 +303,7 @@ def test_get_votes_by_poll_returns_all_votes(db_session):
 
 
 def test_get_votes_by_poll_preserves_ranking_order(db_session):
-    """Comprueba que la consulta de votos de una votación conserva el orden de las opciones del ranking."""
+    """Verify get votes by poll preserves ranking order."""
     poll = Poll(
         title="Ordena tus películas favoritas",
         poll_type=PollType.RANKING,

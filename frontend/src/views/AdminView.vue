@@ -31,7 +31,7 @@ const successMessage = ref('')
 
 let deadlineTimer: ReturnType<typeof setTimeout> | undefined
 
-// Mantiene el estado administrativo coherente con un cierre programado ya alcanzado.
+// Keep the administrative state consistent when a scheduled closing deadline is reached.
 function scheduleDeadline() {
   clearTimeout(deadlineTimer)
   if (!poll.value?.is_active || !poll.value.closes_at || isDisposed) return
@@ -46,7 +46,7 @@ function scheduleDeadline() {
 
 const stopDeadline = watch(() => poll.value?.closes_at, scheduleDeadline)
 
-// Carga los resultados por separado para que un fallo no oculte la administración.
+// Load results separately so a failure does not hide the administration panel.
 async function loadResults() {
   isLoadingResults.value = true
   resultsError.value = ''
@@ -59,7 +59,7 @@ async function loadResults() {
   }
 }
 
-// Conecta las actualizaciones y descarta los avisos de una suscripción anterior.
+// Subscribe to updates and discard notices from previous subscriptions.
 function connectLive() {
   if (isDisposed) return
   const version = ++connectionVersion
@@ -67,13 +67,13 @@ function connectLive() {
   try {
     pollSocket = connectToPoll(
       pollId,
-      // Refleja los resultados recibidos y retira el error de carga anterior.
+      // Apply received results and clear the previous loading error.
       updatedResults => {
         if (version !== connectionVersion || isDisposed) return
         results.value = updatedResults as PollResults
         resultsError.value = ''
       },
-      // Sincroniza también los cambios realizados desde otro panel de administración.
+      // Synchronize changes made from another administration panel.
       isActive => {
         if (version === connectionVersion && !isDisposed && poll.value) {
           if (poll.value.is_active !== isActive && !isUpdating.value) {
@@ -82,11 +82,11 @@ function connectLive() {
           poll.value.is_active = isActive
         }
       },
-      // Informa de la conexión o desconexión del WebSocket actual.
+      // Report connection and disconnection of the current WebSocket.
       state => {
         if (version === connectionVersion && !isDisposed) connectionState.value = state
       },
-      // Revalida el acceso y recupera el estado y los resultados tras cada conexión.
+      // Revalidate access and recover the poll state and results after each connection.
       async isCurrent => {
         if (isDisposed || version !== connectionVersion || !isCurrent()) return
         const [currentPoll, currentResults] = await Promise.all([
@@ -103,7 +103,7 @@ function connectLive() {
   }
 }
 
-// Recupera el token privado, carga la votación y sus resultados y conecta las actualizaciones en directo.
+// Read the optional private token, load the poll and results, and subscribe to live updates.
 async function loadAdminPanel() {
   if (isLoading.value || isUpdating.value) return
   isLoading.value = true
@@ -127,7 +127,7 @@ async function loadAdminPanel() {
   }
 }
 
-// Cierra o reabre la votación y actualiza los datos del panel de administración.
+// Close or reopen the poll and refresh the administration panel.
 async function updatePollStatus() {
   if (!poll.value || isUpdating.value || isLoading.value) return
   const restoreFocus = document.activeElement?.id === 'admin-status'
@@ -162,7 +162,7 @@ async function updatePollStatus() {
 
 const publicUrl = `${window.location.origin}/votacion/${pollId}`
 
-// Copia el enlace público de la votación al portapapeles e informa del resultado.
+// Copy the public poll link to the clipboard and report the outcome.
 async function copyPublicLink() {
   errorMessage.value = ''
   successMessage.value = ''
@@ -176,7 +176,7 @@ async function copyPublicLink() {
 
 onMounted(loadAdminPanel)
 
-// Cierra el WebSocket al abandonar la vista para liberar la conexión.
+// Close the WebSocket when leaving the view to release the connection.
 onUnmounted(() => {
   isDisposed = true
   stopDeadline()

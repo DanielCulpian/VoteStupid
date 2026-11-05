@@ -15,7 +15,7 @@ RATE_POLICIES = {"all": 300, "create": 10, "vote": 30, "admin": 30, "ws": 30, "l
 
 
 def allowed_origins() -> list[str]:
-    """Lee orígenes exactos y rechaza comodines, rutas y credenciales en CORS."""
+    """Read exact CORS origins and reject wildcards, paths, and credentials."""
     origins = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173").split(",")
     result = []
     for value in origins:
@@ -33,19 +33,19 @@ def allowed_origins() -> list[str]:
 
 class RateLimiter:
     def __init__(self, clock=monotonic, max_keys: int = 10000):
-        """Inicializa ventanas de un minuto con memoria acotada y un reloj sustituible."""
+        """Initialize one-minute windows with bounded memory and a replaceable clock."""
         self.clock = clock
         self.max_keys = max_keys
         self.buckets = OrderedDict()
         self.lock = Lock()
 
     def clear(self):
-        """Vacía los contadores para aislar escenarios de prueba."""
+        """Reset the counters to isolate test scenarios."""
         with self.lock:
             self.buckets.clear()
 
     def check(self, client: str, category: str) -> int:
-        """Consume el cupo global y de operación o devuelve los segundos de espera."""
+        """Consume the global and operation quotas, or return the required wait in seconds."""
         now = self.clock()
         with self.lock:
             while self.buckets:
@@ -72,7 +72,7 @@ class RateLimiter:
 
 class SafeAccessLog(logging.Filter):
     def filter(self, record):
-        """Omite queries en los argumentos de logs HTTP y WebSocket de Uvicorn."""
+        """Remove query strings from Uvicorn HTTP and WebSocket log arguments."""
         if isinstance(record.args, tuple):
             record.args = tuple(value.split("?", 1)[0] if isinstance(value, str) else value
                                 for value in record.args)
@@ -81,7 +81,7 @@ class SafeAccessLog(logging.Filter):
 
 class ApiProtection:
     def __init__(self, app, limiter: RateLimiter, origins: list[str]):
-        """Recibe el limitador compartido y los orígenes permitidos para HTTP y WebSocket."""
+        """Receive the shared rate limiter and allowed HTTP and WebSocket origins."""
         self.app = app
         self.limiter = limiter
         self.origins = origins
@@ -89,7 +89,7 @@ class ApiProtection:
         self.total_sockets = 0
 
     async def __call__(self, scope, receive, send):
-        """Limita tráfico y tamaño y evita exponer datos de errores o guardar respuestas privadas."""
+        """Limit traffic and body size without leaking error details or caching private responses."""
         kind = scope["type"]
         if kind not in {"http", "websocket"}:
             return await self.app(scope, receive, send)
@@ -108,7 +108,7 @@ class ApiProtection:
         elif path.rstrip("/").endswith("/votes") and scope["method"] in {"POST", "PUT"}:
             category = "vote"
 
-        # CORS resuelve los preflight antes de llegar a este middleware.
+        # CORS handles preflight requests before they reach this middleware.
         wait = self.limiter.check(client, category)
         if kind == "websocket":
             origin = headers.get("origin")
@@ -137,9 +137,9 @@ class ApiProtection:
                     del self.active_sockets[client]
             return
 
-        # Todas las respuestas de la API evitan almacenamiento en navegadores y proxies.
+        # Prevent browsers and proxies from storing any API response.
         async def safe_send(message):
-            """Añade cabeceras de privacidad sin registrar cuerpos ni tokens."""
+            """Add privacy headers without logging request bodies or tokens."""
             if message["type"] == "http.response.start":
                 response_headers = MutableHeaders(scope=message)
                 response_headers["Cache-Control"] = "no-store"
@@ -172,7 +172,7 @@ class ApiProtection:
         started = False
 
         async def bounded_receive():
-            """Entrega una única copia del cuerpo validado y conserva la señal de desconexión."""
+            """Deliver the validated body once while preserving the disconnect signal."""
             nonlocal delivered
             if not delivered:
                 delivered = True
@@ -180,7 +180,7 @@ class ApiProtection:
             return await receive()
 
         async def track_send(message):
-            """Registra si ya empezó la respuesta para evitar un segundo envío HTTP."""
+            """Track whether the response has started to avoid sending a second HTTP response."""
             nonlocal started
             if message["type"] == "http.response.start":
                 started = True

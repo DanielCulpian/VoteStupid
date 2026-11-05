@@ -2,7 +2,7 @@ const assert = require('node:assert/strict')
 const { test } = require('node:test')
 const { loadService } = require('./helpers/loadService.cjs')
 
-// Ejecuta las guardas reales con el router y la comprobación de cookie controlados.
+// Execute real guards with a controlled router and cookie validation.
 function routing() {
   let guard, expired, authenticated = false
   const replacements = []
@@ -14,7 +14,7 @@ function routing() {
   }
   loadService('../router/index.ts', {
     window: { addEventListener(_, callback) { expired = callback } },
-    // Aísla componentes visuales y deja intacta la lógica de autorización del router.
+    // Stub visual components while preserving the router's authorization logic.
     require: name => name === 'vue-router' ? {
       createWebHistory: () => ({}),
       createRouter: config => { routes = config.routes; return router },
@@ -25,7 +25,7 @@ function routing() {
   return { router, routes, guard: to => guard(to), expire: () => expired(), replacements, authenticate: () => { authenticated = true } }
 }
 
-// Comprueba que cada entrada administrativa exige la sesión y la portada sigue siendo pública.
+// Verify that private entries require a session while the home page remains public.
 test('protege panel, creación y administración individual sin bloquear visitantes', async () => {
   const context = routing()
   for (const path of ['/admin', '/admin/crear', '/admin/:id']) {
@@ -40,20 +40,20 @@ test('protege panel, creación y administración individual sin bloquear visitan
   assert.equal(context.routes.find(r => r.path === '/crear').redirect, '/admin/crear')
 })
 
-// Permite recuperar una votación antigua con cookie válida sin conservar enlaces secretos.
+// Recover old polls with a valid cookie without retaining secret links.
 test('permite entrar en todas las rutas privadas con una sesión válida', async () => {
   const context = routing(); context.authenticate()
   assert.equal(await context.guard({ path: '/admin/old-poll', meta: { private: true } }), true)
 })
 
-// Elimina el fragmento sensible de las redirecciones de acceso.
+// Remove sensitive fragments from login redirects.
 test('no incorpora tokens de enlaces antiguos a la URL de inicio de sesión', async () => {
   const context = routing()
   const redirect = await context.guard({ path: '/admin/poll', fullPath: '/admin/poll#token=secret', meta: { private: true } })
   assert.doesNotMatch(JSON.stringify(redirect), /secret|token/)
 })
 
-// Reacciona a una sesión revocada y conserva las rutas públicas abiertas.
+// React to revoked sessions while leaving public routes accessible.
 test('redirige al caducar la sesión solo cuando la vista actual es privada', () => {
   const context = routing(); context.expire()
   assert.equal(context.replacements[0].path, '/acceso')

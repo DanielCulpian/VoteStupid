@@ -3,7 +3,7 @@ const path = require('node:path')
 const vm = require('node:vm')
 const ts = require('typescript')
 
-// Carga el servicio real con una URL de prueba y dependencias controladas, sin navegador ni servidor.
+// Load the real service with a test URL and controlled dependencies, without a browser or server.
 function loadService(filename, globals = {}, apiUrl = 'http://127.0.0.1:8000') {
   const source = fs.readFileSync(path.join(__dirname, '../../src/services', filename), 'utf8')
     .replaceAll('import.meta.env.VITE_API_URL', JSON.stringify(apiUrl))

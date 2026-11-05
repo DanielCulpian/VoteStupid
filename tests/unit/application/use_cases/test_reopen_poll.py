@@ -13,44 +13,44 @@ from app.domain.repositories.poll_repository import PollRepository
 class FakePollRepository(PollRepository):
 
     def __init__(self):
-        """Inicializa el almacenamiento en memoria del repositorio de prueba."""
+        """Initialize the test repository's in-memory storage."""
         self.polls = {}
 
     def get_by_id(self, poll_id):
-        """Busca la votación en el repositorio simulado."""
+        """Find the poll in the mock repository."""
         return self.polls.get(poll_id)
 
     def update_poll(self, poll):
-        """Sustituye la votación almacenada en el repositorio simulado."""
+        """Replace the poll stored in the mock repository."""
         self.polls[poll.id] = poll
 
     def get_vote_by_voter(self, poll_id, voter_token_hash):
-        """Señala que esta operación no está implementada en el repositorio de prueba."""
+        """Indicate that this operation is not implemented in the test repository."""
         raise NotImplementedError
 
     def save_vote(self, vote):
-        """Señala que esta operación no está implementada en el repositorio de prueba."""
+        """Indicate that this operation is not implemented in the test repository."""
         raise NotImplementedError
 
     def update_vote(self, vote):
-        """Señala que esta operación no está implementada en el repositorio de prueba."""
+        """Indicate that this operation is not implemented in the test repository."""
         raise NotImplementedError
 
     def get_options_by_ids(self, poll_id, option_ids):
-        """Señala que esta operación no está implementada en el repositorio de prueba."""
+        """Indicate that this operation is not implemented in the test repository."""
         raise NotImplementedError
 
     def save_poll(self, poll):
-        """Guarda la votación en el repositorio simulado."""
+        """Save the poll in the mock repository."""
         self.polls[poll.id] = poll
 
     def get_votes_by_poll(self, poll_id: UUID) -> list[Vote]:
-        """Simula una consulta sin resultados para este escenario de prueba."""
+        """Simulate an empty query result for this test scenario."""
         return []
 
 
 def create_poll(is_active=False):
-    """Construye una votación y sus opciones para preparar el escenario de prueba."""
+    """Build a poll and its options for the test scenario."""
     options = [
         Option(text="Opción 1"),
         Option(text="Opción 2")
@@ -65,14 +65,14 @@ def create_poll(is_active=False):
 
 
 def create_use_case(repository):
-    """Construye el caso de uso de la prueba con el repositorio indicado."""
+    """Build the test use case with the supplied repository."""
     return ReopenPoll(poll_repository=repository)
 
 
-# 1. Reabrir una votación correctamente
+# 1. Reopen a poll successfully
 
 def test_reopen_poll_successfully():
-    """Comprueba que la reapertura de votaciones se completa correctamente."""
+    """Verify reopen poll successfully."""
     poll = create_poll()
     repository = FakePollRepository()
     repository.polls[poll.id] = poll
@@ -85,10 +85,10 @@ def test_reopen_poll_successfully():
     assert reopened_poll.id == poll.id
 
 
-# 2. Rechazar una votación inexistente
+# 2. Reject a nonexistent poll
 
 def test_reopen_poll_rejects_nonexistent_poll():
-    """Comprueba que la reapertura de votaciones rechaza una votación inexistente."""
+    """Verify reopen poll rejects nonexistent poll."""
     repository = FakePollRepository()
     use_case = create_use_case(repository)
 
@@ -96,10 +96,10 @@ def test_reopen_poll_rejects_nonexistent_poll():
         use_case.execute(uuid4())
 
 
-# 3. Permitir reabrir una votación que ya está abierta
+# 3. Allow reopening an already open poll
 
 def test_reopen_poll_allows_already_open_poll():
-    """Comprueba que la reapertura de votaciones permite reabrir una votación que ya estaba abierta."""
+    """Verify reopen poll allows already open poll."""
     poll = create_poll(is_active=True)
     repository = FakePollRepository()
     repository.polls[poll.id] = poll
@@ -111,10 +111,10 @@ def test_reopen_poll_allows_already_open_poll():
     assert reopened_poll.is_active is True
 
 
-# 4. Persistir el estado actualizado en el repositorio
+# 4. Persist the updated state in the repository
 
 def test_reopen_poll_persists_updated_poll():
-    """Comprueba que la reapertura de votaciones guarda el nuevo estado de la votación."""
+    """Verify reopen poll persists updated poll."""
     poll = create_poll()
     repository = FakePollRepository()
     repository.polls[poll.id] = poll

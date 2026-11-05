@@ -7,7 +7,7 @@ from app.infrastructure.models.option_model import OptionModel
 
 
 def to_model(poll: Poll) -> PollModel:
-    """Convierte la votación y sus opciones a modelos SQLAlchemy."""
+    """Convert a poll and its options to SQLAlchemy models."""
     option_models = [
         OptionModel(
             id=option.id,
@@ -31,7 +31,7 @@ def to_model(poll: Poll) -> PollModel:
 
 
 def to_entity(poll_model: PollModel) -> Poll:
-    """Reconstruye la votación y sus opciones a partir de los modelos SQLAlchemy."""
+    """Reconstruct a poll and its options from SQLAlchemy models."""
     options = [
         Option(
             id=option.id,

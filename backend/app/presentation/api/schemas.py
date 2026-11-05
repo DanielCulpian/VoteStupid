@@ -19,7 +19,7 @@ class CreatePollRequest(BaseModel):
     @field_validator("title")
     @classmethod
     def validate_title(cls, value: str) -> str:
-        """Elimina espacios del título y rechaza los títulos vacíos."""
+        """Trim the title and reject empty titles."""
         value = value.strip()
 
         if not value:
@@ -30,7 +30,7 @@ class CreatePollRequest(BaseModel):
     @field_validator("option_texts")
     @classmethod
     def validate_option_texts(cls, value: list[str]) -> list[str]:
-        """Elimina espacios de las opciones y rechaza los textos vacíos."""
+        """Trim the option text and reject empty options."""
         cleaned_options = [option.strip() for option in value]
 
         if any(not option for option in cleaned_options):
@@ -41,7 +41,7 @@ class CreatePollRequest(BaseModel):
     @field_validator("closes_at")
     @classmethod
     def validate_closes_at(cls, value: datetime | None) -> datetime | None:
-        """Exige una zona horaria cuando se indica una fecha de cierre."""
+        """Require a time zone when a closing date is provided."""
         if value is not None and (
             value.tzinfo is None or value.utcoffset() is None
         ):
@@ -51,7 +51,7 @@ class CreatePollRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_max_selections(self):
-        """Comprueba que el límite de selecciones sea compatible con el tipo y las opciones."""
+        """Check that the selection limit is compatible with the poll type and options."""
         if self.poll_type != PollType.MULTIPLE_CHOICE:
             if self.max_selections is not None:
                 raise ValueError(
@@ -89,7 +89,7 @@ class PollResponse(BaseModel):
 
     @model_validator(mode="after")
     def effective_status(self):
-        """Presenta como cerrada una votación cuyo plazo ha vencido, sin alterar la base de datos."""
+        """Present expired polls as closed without modifying the database."""
         if self.closes_at is not None and self.closes_at <= datetime.now(timezone.utc):
             self.is_active = False
         return self
@@ -110,7 +110,7 @@ class PollSummary(BaseModel):
 
     @model_validator(mode="after")
     def effective_status(self):
-        """Mantiene coherente el estado público con los filtros y las restricciones de voto."""
+        """Keep the public state consistent with filters and voting restrictions."""
         if self.closes_at is not None and self.closes_at <= datetime.now(timezone.utc):
             self.is_active = False
         return self

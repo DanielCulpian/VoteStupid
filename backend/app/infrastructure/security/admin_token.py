@@ -4,12 +4,12 @@ import secrets
 
 
 def generate_admin_token() -> str:
-    """Genera un token aleatorio seguro para administrar una votación."""
+    """Generate a secure random token for administering a poll."""
     return secrets.token_urlsafe(32)
 
 
 def hash_admin_token(token: str) -> str:
-    """Calcula el hash SHA-256 del token de administración y rechaza valores vacíos."""
+    """Calculate the administration token's SHA-256 hash and reject empty values."""
     if not token:
         raise ValueError("El token de administrador no puede estar vacío.")
 
@@ -17,7 +17,7 @@ def hash_admin_token(token: str) -> str:
 
 
 def verify_admin_token(token: str, stored_hash: str | None) -> bool:
-    """Compara el hash del token recibido con el almacenado en tiempo constante."""
+    """Compare the received token hash with the stored hash in constant time."""
     if not token or not stored_hash:
         return False
 

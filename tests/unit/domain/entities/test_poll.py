@@ -6,7 +6,7 @@ from app.domain.entities.poll import Poll
 from app.domain.entities.poll_type import PollType
 
 def test_create_valid_poll():
-    """Comprueba la creación de una votación con datos válidos."""
+    """Verify create valid poll."""
     options = [
         Option(text="Ir al cine"),
         Option(text="Ir a cenar"),
@@ -27,7 +27,7 @@ def test_create_valid_poll():
     assert poll.created_at is not None
 
 def test_poll_requires_title():
-    """Comprueba que la votación exige un título."""
+    """Verify poll requires title."""
     options = [
         Option(text="Opción 1"),
         Option(text="Opción 2")
@@ -42,7 +42,7 @@ def test_poll_requires_title():
 
 
 def test_poll_requires_at_least_two_options():
-    """Comprueba que la votación exige al menos dos opciones."""
+    """Verify poll requires at least two options."""
     options = [
         Option(text="Opción 1")
     ]
@@ -56,7 +56,7 @@ def test_poll_requires_at_least_two_options():
 
 
 def test_multiple_choice_rejects_too_many_selections():
-    """Comprueba que la elección múltiple rechaza un límite superior al número de opciones."""
+    """Verify multiple choice rejects too many selections."""
     options = [
         Option(text="Opción 1"),
         Option(text="Opción 2"),
@@ -72,7 +72,7 @@ def test_multiple_choice_rejects_too_many_selections():
         )
 
 def test_multiple_choice_rejects_zero_selections():
-    """Comprueba que la elección múltiple rechaza un límite de selecciones igual a cero."""
+    """Verify multiple choice rejects zero selections."""
     options = [
         Option(text="Opción 1"),
         Option(text="Opción 2")
@@ -88,7 +88,7 @@ def test_multiple_choice_rejects_zero_selections():
 
 
 def test_single_choice_rejects_max_selections():
-    """Comprueba que la elección única rechaza un límite de selecciones."""
+    """Verify single choice rejects max selections."""
     options = [
         Option(text="Opción 1"),
         Option(text="Opción 2")
@@ -103,7 +103,7 @@ def test_single_choice_rejects_max_selections():
         )
 
 def test_poll_rejects_closes_at_without_timezone():
-    """Comprueba que la votación rechaza una fecha de cierre sin zona horaria."""
+    """Verify poll rejects closes at without timezone."""
     options = [
         Option(text="Ir al cine"),
         Option(text="Ir a cenar")

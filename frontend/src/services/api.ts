@@ -1,11 +1,11 @@
 const API_URL = import.meta.env.VITE_API_URL ?? ''
 const REQUEST_TIMEOUT_MS = 15000
 
-// Conserva el código HTTP para distinguir errores de acceso, validación y servidor.
+// Preserve the HTTP status to distinguish access, validation, and server errors.
 export class ApiError extends Error {
   status: number
 
-  // Asocia un mensaje comprensible al estado devuelto por la API.
+  // Associate a readable message with the API response status.
   constructor(message: string, status: number) {
     super(message)
     this.name = 'ApiError'
@@ -13,7 +13,7 @@ export class ApiError extends Error {
   }
 }
 
-// Traduce los errores de validación de FastAPI sin mostrar mensajes técnicos.
+// Translate FastAPI validation errors without exposing technical messages.
 function validationMessage(detail: unknown): string {
   if (Array.isArray(detail)) {
     const fields: Record<string, string> = {
@@ -41,7 +41,7 @@ function validationMessage(detail: unknown): string {
   return 'Revisa los datos del formulario e inténtalo de nuevo.'
 }
 
-// Elige un mensaje útil sin exponer detalles internos de los errores del servidor.
+// Choose a useful message without revealing internal server error details.
 function responseMessage(status: number, data: unknown): string {
   const detail = typeof data === 'object' && data !== null && 'detail' in data
     ? data.detail
@@ -60,7 +60,7 @@ function responseMessage(status: number, data: unknown): string {
   return 'No se ha podido completar la operación. Vuelve a intentarlo.'
 }
 
-// Envía una petición con tiempo límite y transforma los fallos en mensajes comprensibles.
+// Send a request with a timeout and convert failures into readable messages.
 export async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {},
@@ -78,7 +78,7 @@ export async function apiRequest<T>(
       signal: options.signal ? AbortSignal.any([options.signal, timeout]) : timeout,
     })
     const data: unknown = await response.json().catch(error => {
-      // Propaga las cancelaciones para conservar el mensaje de tiempo de espera.
+      // Propagate cancellation so the timeout message is preserved.
       if (timeout.aborted || options.signal?.aborted) throw error
       return null
     })

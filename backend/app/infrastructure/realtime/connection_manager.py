@@ -5,11 +5,11 @@ from fastapi import WebSocket, WebSocketDisconnect
 
 class ConnectionManager:
     def __init__(self):
-        """Inicializa el registro de conexiones WebSocket agrupadas por votación."""
+        """Initialize the WebSocket connection registry grouped by poll."""
         self.active_connections: dict[UUID, set[WebSocket]] = {}
 
     async def connect(self, poll_id: UUID, websocket: WebSocket):
-        """Acepta y registra una conexión WebSocket asociada a una votación."""
+        """Accept and register a WebSocket connection for a poll."""
         await websocket.accept()
 
         if poll_id not in self.active_connections:
@@ -18,7 +18,7 @@ class ConnectionManager:
         self.active_connections[poll_id].add(websocket)
 
     def disconnect(self, poll_id: UUID, websocket: WebSocket):
-        """Retira la conexión y elimina el grupo de la votación si queda vacío."""
+        """Remove the connection and delete the poll group when it becomes empty."""
         connections = self.active_connections.get(poll_id)
 
         if connections is None:
@@ -30,7 +30,7 @@ class ConnectionManager:
             del self.active_connections[poll_id]
 
     async def broadcast(self, poll_id: UUID, message: dict):
-        """Envía un mensaje a los clientes de una votación y retira las conexiones fallidas."""
+        """Broadcast a message to a poll's clients and remove failed connections."""
         connections = self.active_connections.get(poll_id, set())
 
         disconnected = []

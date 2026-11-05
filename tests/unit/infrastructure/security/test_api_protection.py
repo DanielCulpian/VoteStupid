@@ -12,14 +12,14 @@ from app.infrastructure.security.api_protection import ApiProtection, RateLimite
 
 
 def create_app():
-    """Prueba validacion y limites de un organizador autorizado, sin omitir esas protecciones."""
+    """Test validation and rate limits for an authorized organizer without bypassing protections."""
     app = protected_app()
     app.dependency_overrides[require_admin_session] = lambda: None
     return app
 
 
 def test_limiter_window_and_bounded_storage():
-    """Comprueba el cupo por operación, su caducidad y el límite de memoria."""
+    """Verify limiter window and bounded storage."""
     now = [0]
     limiter = RateLimiter(clock=lambda: now[0], max_keys=2)
     for _ in range(10):
@@ -42,7 +42,7 @@ def test_limiter_window_and_bounded_storage():
     ("/api/status", "GET", 300),
 ])
 def test_api_returns_429_without_disabling_protection(path, method, limit):
-    """Verifica cupos reales incluso para peticiones inválidas o sin credenciales."""
+    """Verify api returns 429 without disabling protection."""
     with TestClient(create_app()) as client:
         for _ in range(limit):
             assert client.request(method, path, json={}).status_code != 429
@@ -53,7 +53,7 @@ def test_api_returns_429_without_disabling_protection(path, method, limit):
 
 
 def test_changing_poll_ids_tokens_or_forwarded_headers_does_not_reset_limits():
-    """Impide esquivar el cupo rotando identificadores, tokens o cabeceras de IP falsas."""
+    """Verify changing poll ids tokens or forwarded headers does not reset limits."""
     with TestClient(create_app()) as client:
         for index in range(30):
             response = client.get(f"/api/admin/polls/invalid-{index}", headers={
@@ -67,7 +67,7 @@ def test_changing_poll_ids_tokens_or_forwarded_headers_does_not_reset_limits():
 
 
 def test_trusted_uvicorn_proxy_preserves_separate_client_limits():
-    """Comprueba que solo Uvicorn y un proxy explícitamente autorizado determinan la IP."""
+    """Verify trusted uvicorn proxy preserves separate client limits."""
     app = ProxyHeadersMiddleware(create_app(), trusted_hosts=["testclient"])
     with TestClient(app) as client:
         for _ in range(10):
@@ -78,20 +78,20 @@ def test_trusted_uvicorn_proxy_preserves_separate_client_limits():
 
 @pytest.mark.parametrize("origin", ["*", "https://example.com/path", "https://user:pass@example.com", "https://*.example.com"])
 def test_cors_rejects_unsafe_configuration(monkeypatch, origin):
-    """Rechaza comodines, credenciales y rutas en la configuración de orígenes."""
+    """Verify cors rejects unsafe configuration."""
     monkeypatch.setenv("CORS_ALLOWED_ORIGINS", origin)
     with pytest.raises(ValueError):
         allowed_origins()
 
 
 def test_cors_is_explicit_and_survives_errors(monkeypatch):
-    """Comprueba preflight autorizado y que 429 y 500 conservan las cabeceras CORS."""
+    """Verify cors is explicit and survives errors."""
     monkeypatch.setenv("CORS_ALLOWED_ORIGINS", "https://vote.example.com")
     app = create_app()
 
     @app.get("/fail")
     def fail():
-        """Simula un fallo interno sin acceso a datos reales."""
+        """Simulate an internal failure without accessing real data."""
         raise RuntimeError("private-database-password")
 
     with TestClient(app) as client:
@@ -109,13 +109,13 @@ def test_cors_is_explicit_and_survives_errors(monkeypatch):
 
 
 def test_internal_errors_and_validation_do_not_expose_secrets(caplog):
-    """Comprueba que ni respuestas ni logs repiten secretos de cuerpos o excepciones."""
+    """Verify internal errors and validation do not expose secrets."""
     secret = "secret-admin-password-" * 20
     app = create_app()
 
     @app.get("/fail")
     def fail():
-        """Simula una excepción que podría incluir credenciales de base de datos."""
+        """Simulate an exception that could contain database credentials."""
         raise RuntimeError(secret)
 
     with TestClient(app) as client:
@@ -134,7 +134,7 @@ def test_internal_errors_and_validation_do_not_expose_secrets(caplog):
 
 
 def test_access_logs_omit_query_secrets():
-    """Elimina tokens enviados por error como parámetros antes de emitir el log de Uvicorn."""
+    """Verify access logs omit query secrets."""
     record = logging.LogRecord("uvicorn.access", 20, "", 0, '%s - "%s %s HTTP/%s" %d',
                                ("client", "GET", "/api/status?token=private-value", "1.1", 200), None)
     assert SafeAccessLog().filter(record)
@@ -147,13 +147,13 @@ def test_access_logs_omit_query_secrets():
 
 @pytest.mark.parametrize("method", ["post", "put"])
 def test_unexpected_vote_value_errors_remain_private(method, caplog):
-    """Evita confundir un ValueError interno con un rechazo público de las reglas del voto."""
+    """Verify unexpected vote value errors remain private."""
     from app.presentation.api.dependencies import get_cast_vote_use_case, get_update_vote_use_case
     from uuid import uuid4
 
     class FailingVote:
         def execute(self, **kwargs):
-            """Simula un fallo interno que contiene un secreto y palabras de un error público."""
+            """Simulate an internal failure containing a secret and public error wording."""
             raise ValueError("private-value no existe")
 
     app = create_app()
@@ -168,7 +168,7 @@ def test_unexpected_vote_value_errors_remain_private(method, caplog):
 
 
 def test_websocket_binary_input_is_closed_without_internal_error():
-    """Rechaza mensajes binarios en el canal de publicación y libera su registro."""
+    """Verify websocket binary input is closed without internal error."""
     from uuid import uuid4
     from starlette.websockets import WebSocketDisconnect
     from app.infrastructure.realtime.connection_manager import connection_manager
@@ -184,23 +184,23 @@ def test_websocket_binary_input_is_closed_without_internal_error():
 
 
 def test_oversized_bodies_are_rejected_with_or_without_content_length():
-    """Bloquea cuerpos grandes antes del esquema aunque lleguen por fragmentos sin longitud."""
+    """Verify oversized bodies are rejected with or without content length."""
     async def scenario():
-        """Ejecuta ASGI directamente para representar una petición fragmentada real."""
+        """Invoke ASGI directly to represent a real chunked request."""
         messages = iter([{"type": "http.request", "body": b"x" * 40000, "more_body": True},
                          {"type": "http.request", "body": b"x" * 40000, "more_body": False}])
         sent = []
 
         async def receive():
-            """Entrega el siguiente fragmento de la petición."""
+            """Deliver the next request chunk."""
             return next(messages)
 
         async def send(message):
-            """Captura la respuesta del middleware."""
+            """Capture the middleware response."""
             sent.append(message)
 
         async def unreachable(scope, receive, send):
-            """Impide que un cuerpo excesivo llegue a las rutas."""
+            """Prevent an oversized body from reaching the routes."""
             pytest.fail("El cuerpo excesivo alcanzó el endpoint")
 
         await ApiProtection(unreachable, RateLimiter(), [])({"type": "http", "path": "/api/polls", "method": "POST", "headers": [], "client": ("client", 1)}, receive, send)
@@ -212,7 +212,7 @@ def test_oversized_bodies_are_rejected_with_or_without_content_length():
 
 
 def test_websocket_origins_rate_and_cleanup(monkeypatch):
-    """Verifica rechazo de orígenes, límite de aperturas y recuperación del cupo simultáneo."""
+    """Verify websocket origins rate and cleanup."""
     from contextlib import ExitStack
     from uuid import uuid4
     from starlette.websockets import WebSocketDisconnect
@@ -227,7 +227,7 @@ def test_websocket_origins_rate_and_cleanup(monkeypatch):
         with ExitStack() as stack:
             for _ in range(20):
                 stack.enter_context(client.websocket_connect(path))
-            # TestClient admite denegaciones HTTP y cierres previos a la aceptación.
+            # TestClient supports HTTP denials and closures before WebSocket acceptance.
             with pytest.raises((WebSocketDisconnect, WebSocketDenialResponse)):
                 stack.enter_context(client.websocket_connect(path))
         with client.websocket_connect(path, headers={"Origin": "http://localhost:5173"}):

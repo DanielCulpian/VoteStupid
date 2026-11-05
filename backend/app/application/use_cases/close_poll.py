@@ -7,24 +7,24 @@ from app.domain.repositories.poll_repository import PollRepository
 class ClosePoll:
 
     def __init__(self, poll_repository: PollRepository):
-        """Recibe las dependencias necesarias para ejecutar el caso de uso."""
+        """Receive the dependencies required to execute the use case."""
         self.poll_repository = poll_repository
 
     def execute(self, poll_id: UUID) -> Poll:
-        """Marca la votación como cerrada y guarda el cambio."""
+        """Mark the poll as closed and persist the change."""
 
-        # 1. Buscar la votación
+        # 1. Find the poll
         poll = self.poll_repository.get_by_id(poll_id)
 
-        # 2. Comprobar si existe
+        # 2. Check whether the poll exists
         if poll is None:
             raise ValueError("La votación no existe.")
 
-        # 3. Cerrar la votación
+        # 3. Close the poll
         poll.is_active = False
 
-        # 4. Guardar los cambios
+        # 4. Save the changes
         self.poll_repository.update_poll(poll)
 
-        # 5. Devolver la votación
+        # 5. Return the poll
         return poll

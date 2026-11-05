@@ -14,7 +14,7 @@ if (-not (Test-Path -LiteralPath $dockerPath)) {
 
 Push-Location (Split-Path $PSScriptRoot -Parent)
 try {
-    # El modo local nunca debe reutilizar accidentalmente un conector público activo.
+    # Local mode must never accidentally reuse an active public connector.
     if ($Action -in @('start', 'stop')) {
         & $dockerPath compose -f compose.yaml -f compose.tunnel.yaml stop cloudflared
         if ($LASTEXITCODE -ne 0) { throw 'No se ha podido detener el túnel antes de cambiar al modo local.' }

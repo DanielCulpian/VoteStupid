@@ -17,7 +17,7 @@ class UpdateVote:
         poll_repository: PollRepository,
         validate_vote_selection: ValidateVoteSelection
     ):
-        """Recibe las dependencias necesarias para ejecutar el caso de uso."""
+        """Receive the dependencies required to execute the use case."""
         self.poll_repository = poll_repository
         self.validate_vote_selection = validate_vote_selection
 
@@ -27,26 +27,26 @@ class UpdateVote:
         voter_token_hash: str,
         selected_option_ids: list[UUID]
     ) -> Vote:
-        """Valida la votación y la selección antes de modificar el voto del participante."""
+        """Validate the poll and selection before updating the participant's vote."""
 
-        # 1. Obtener la votación
+        # 1. Retrieve the poll
         poll = self.poll_repository.get_by_id(poll_id)
 
         if poll is None:
             raise VoteRuleError("La votación no existe.")
 
-        # 2. Comprobar que está abierta
+        # 2. Check that the poll is open
         if not poll.is_active:
             raise VoteRuleError("La votación está cerrada.")
 
-        # 3. Comprobar la fecha límite
+        # 3. Check the closing deadline
         if (
             poll.closes_at is not None
             and datetime.now(timezone.utc) >= poll.closes_at
         ):
             raise VoteRuleError("La votación ha alcanzado su fecha de cierre.")
 
-        # 4. Buscar el voto existente
+        # 4. Find the existing vote
         existing_vote = self.poll_repository.get_vote_by_voter(
             poll_id,
             voter_token_hash
@@ -55,17 +55,17 @@ class UpdateVote:
         if existing_vote is None:
             raise VoteRuleError("Este participante todavía no ha votado.")
 
-        # 5. Validar la nueva selección
+        # 5. Validate the new selection
         self.validate_vote_selection.execute(
             poll=poll,
             selected_option_ids=selected_option_ids
         )
 
-        # 6. Actualizar el voto
+        # 6. Update the vote
         existing_vote.update_selection(selected_option_ids)
 
-        # 7. Guardar los cambios
+        # 7. Save the changes
         self.poll_repository.update_vote(existing_vote)
 
-        # 8. Devolver el voto actualizado
+        # 8. Return the updated vote
         return existing_vote

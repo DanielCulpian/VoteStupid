@@ -2,7 +2,7 @@ import hashlib
 
 
 def hash_voter_token(token: str) -> str:
-    """Calcula el hash SHA-256 del token del participante y rechaza valores vacíos."""
+    """Calculate the voter token's SHA-256 hash and reject empty values."""
     if not token or not token.strip():
         raise ValueError("El token del votante no puede estar vacío.")
 

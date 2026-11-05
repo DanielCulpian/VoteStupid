@@ -18,7 +18,7 @@ class LoginRequest(BaseModel):
 
 @router.post("/login", dependencies=[Depends(protect_admin_request)])
 def login(data: LoginRequest, request: Request, response: Response, db: Session = Depends(session_db)):
-    """Comprueba la contraseña y entrega el secreto exclusivamente en una cookie HttpOnly."""
+    """Verify the password and deliver the secret exclusively through an HttpOnly cookie."""
     wait = request.app.state.rate_limiter.check("admin-login-global", "login_total")
     if wait:
         raise HTTPException(429, "Demasiados intentos. Inténtalo más tarde.", headers={"Retry-After": str(wait)})
@@ -32,13 +32,13 @@ def login(data: LoginRequest, request: Request, response: Response, db: Session 
 
 @router.get("/session")
 def current_session(session: AdminSessionModel = Depends(require_admin_session)):
-    """Permite comprobar la sesión sin devolver su secreto ni hashes."""
+    """Check the session without returning its secret or hashes."""
     return {"authenticated": True, "expires_at": session.expires_at}
 
 
 @router.delete("/session", dependencies=[Depends(protect_admin_request)])
 def logout(request: Request, response: Response, db: Session = Depends(session_db)):
-    """Revoca la cookie en el servidor incluso si el navegador conserva una copia."""
+    """Revoke the server-side cookie session even if the browser retains a copy."""
     session = db.get(AdminSessionModel, session_hash(request.cookies.get(COOKIE_NAME, "")))
     if session:
         db.delete(session)

@@ -9,7 +9,7 @@ export interface VoteResponse {
   updated_at: string
 }
 
-// Recupera el token local del participante o genera y guarda uno para esta votación.
+// Retrieve the participant's local token, or generate and store one for this poll.
 function getVoterToken(pollId: string): string {
   const storageKey = `votestupid:voter-token:${pollId}`
 
@@ -28,7 +28,7 @@ function getVoterToken(pollId: string): string {
   return token
 }
 
-// Registra la selección del participante usando su token local.
+// Submit the participant's selection using their local token.
 export function castVote(
   pollId: string,
   selectedOptionIds: string[],
@@ -44,7 +44,7 @@ export function castVote(
   })
 }
 
-// Actualiza la selección del voto asociado al token local del participante.
+// Update the vote selection associated with the participant's local token.
 export function updateVote(
   pollId: string,
   selectedOptionIds: string[],

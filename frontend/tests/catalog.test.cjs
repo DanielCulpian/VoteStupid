@@ -2,18 +2,18 @@ const assert = require('node:assert/strict')
 const { test } = require('node:test')
 const { loadService } = require('./helpers/loadService.cjs')
 
-// Ejecuta el servicio real con peticiones observables sin acceso al servidor.
+// Execute the real service with observable requests and no server access.
 function setup() {
   const calls = []
   const service = loadService('catalogService.ts', {
     URLSearchParams,
-    // Conserva la consulta enviada para comprobar todos los filtros combinables.
+    // Record the submitted query to check every combinable filter.
     require: () => ({ apiRequest: async url => { calls.push(url); return { items: [], total: 0 } } }),
   })
   return { service, calls }
 }
 
-// Comprueba que no se pierde ningún filtro ni se mezcla la ruta pública con la privada.
+// Verify that no filter is lost and public and private routes remain distinct.
 test('combina estados, tipos y paginación en el catálogo público y privado', async () => {
   const { service, calls } = setup()
   for (const state of ['all', 'active', 'inactive']) {
@@ -30,7 +30,7 @@ test('combina estados, tipos y paginación en el catálogo público y privado', 
   assert.match(calls.at(-1), /^\/api\/admin\/polls\?/)
 })
 
-// Verifica que una fecha cumplida y un cierre manual deshabilitan la participación en tarjetas.
+// Verify that expiration and manual closure disable participation on cards.
 test('calcula la disponibilidad incluyendo los cierres programados', () => {
   const { service } = setup()
   assert.equal(service.isOpen({ is_active: true, closes_at: null }, 1000), true)
@@ -39,7 +39,7 @@ test('calcula la disponibilidad incluyendo los cierres programados', () => {
   assert.equal(service.isOpen({ is_active: true, closes_at: new Date(1001).toISOString() }, 1000), true)
 })
 
-// Mantiene denominaciones comprensibles y coherentes para los tres tipos existentes.
+// Keep clear and consistent labels for the three existing poll types.
 test('presenta los tres tipos sin nombres técnicos internos', () => {
   const { service } = setup()
   assert.equal(service.typeLabel('single_choice'), 'Elección única')

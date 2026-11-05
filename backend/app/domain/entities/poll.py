@@ -24,7 +24,7 @@ class Poll:
     )
 
     def __post_init__(self):
-        """Valida el título, las opciones, el límite de selecciones y la zona horaria del cierre."""
+        """Validate the title, options, selection limit, and closing date time zone."""
         if not self.title.strip():
             raise ValueError("El título de la votación no puede estar vacío.")
 

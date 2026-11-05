@@ -1,4 +1,4 @@
-"""Comprueba el arranque del contenedor sin abrir conexiones ni procesos reales."""
+"""Test container startup without opening real connections or processes."""
 import importlib.util
 from pathlib import Path
 
@@ -7,7 +7,7 @@ from sqlalchemy.engine import make_url
 
 
 def load_startup():
-    """Carga el punto de entrada sin ejecutarlo automáticamente."""
+    """Load the entry point without executing it automatically."""
     path = Path(__file__).resolve().parents[3] / 'scripts' / 'container_start.py'
     spec = importlib.util.spec_from_file_location('container_start', path)
     module = importlib.util.module_from_spec(spec)
@@ -16,7 +16,7 @@ def load_startup():
 
 
 def test_migrates_before_starting_and_encodes_database_password(monkeypatch):
-    """Preserva contraseñas especiales y arranca solo después de migrar correctamente."""
+    """Verify migrates before starting and encodes database password."""
     module = load_startup()
     calls = []
     monkeypatch.setenv('DATABASE_URL', 'postgresql+psycopg://localhost/unused')
@@ -34,13 +34,13 @@ def test_migrates_before_starting_and_encodes_database_password(monkeypatch):
 
 
 def test_failed_migration_prevents_server_start(monkeypatch):
-    """Impide servir una API con esquema incompleto cuando falla Alembic."""
+    """Verify failed migration prevents server start."""
     module = load_startup()
     monkeypatch.setenv('DATABASE_URL', 'postgresql+psycopg://localhost/unused')
     monkeypatch.setenv('POSTGRES_PASSWORD', 'test-only-password')
 
     def fail_migration(config, revision):
-        """Simula un fallo de migración sin tocar la base de datos."""
+        """Simulate a migration failure without accessing the database."""
         raise RuntimeError('migration failed')
 
     monkeypatch.setattr(module.command, 'upgrade', fail_migration)

@@ -2,17 +2,17 @@ const assert = require('node:assert/strict')
 const { test } = require('node:test')
 const { loadService } = require('./helpers/loadService.cjs')
 
-// Construye el WebSocket con el mismo origen HTTPS cuando se sirve detrás de Nginx.
+// Build the WebSocket URL from the public HTTPS origin when running behind Nginx.
 test('usa el origen público y wss cuando no hay URL de API configurada', () => {
   let destination
   const { connectToPoll } = loadService('websocketService.ts', {
     window: { location: { origin: 'https://votes.example' } },
     WebSocket: class {
-      // Recoge la dirección sin abrir una conexión de red.
+      // Capture the URL without opening a network connection.
       constructor(url) { destination = url }
-      // Sustituye el transporte para comprobar únicamente la dirección generada.
+      // Stub the transport to check only the generated URL.
       addEventListener() {}
-      // Permite cerrar el intento y cancelar su temporizador.
+      // Allow closing the attempt and cancelling its timer.
       close() {}
     },
   }, '')
@@ -21,38 +21,38 @@ test('usa el origen público y wss cuando no hay URL de API configurada', () => 
   connection.close()
 })
 
-// Simula el transporte con eventos independientes de la red.
+// Simulate transport events independently of the network.
 class FakeWebSocket extends EventTarget {
   static CONNECTING = 0
   static OPEN = 1
   static CLOSED = 3
   static instances = []
   readyState = 0
-  // Registra cada transporte para detectar conexiones duplicadas.
+  // Record each transport to detect duplicate connections.
   constructor(url) { super(); this.url = url; FakeWebSocket.instances.push(this) }
-  // Abre el transporte y permite sincronizar la vista.
+  // Open the transport and allow view synchronization.
   open() { this.readyState = 1; this.dispatchEvent(new Event('open')) }
-  // Simula el cierre del servidor o del usuario.
+  // Simulate closure by the server or user.
   close() { this.readyState = 3; this.dispatchEvent(new Event('close')) }
-  // Entrega un evento de resultados o estado.
+  // Deliver a results or state event.
   message(value) { this.dispatchEvent(new MessageEvent('message', { data: JSON.stringify(value) })) }
 }
 
-// Proporciona un reloj controlado y captura los eventos de la interfaz.
+// Provide a controlled clock and capture interface events.
 function setup(synchronize) {
   FakeWebSocket.instances = []
   const timers = new Map(), states = [], results = [], statuses = []
   let sequence = 0
   const { connectToPoll } = loadService('websocketService.ts', {
     WebSocket: FakeWebSocket,
-    // Registra esperas sin consumir tiempo real.
+    // Record delays without consuming real time.
     setTimeout(callback, milliseconds) { const id = ++sequence; timers.set(id, { callback, milliseconds }); return id },
-    // Cancela las esperas del intento anterior.
+    // Cancel delays scheduled by the previous attempt.
     clearTimeout(id) { timers.delete(id) },
     console: { error() {} },
   })
   const connection = connectToPoll('poll-1', v => results.push(v), v => statuses.push(v), v => states.push(v), synchronize)
-  // Ejecuta una espera concreta y la retira como haria el navegador.
+  // Run a specific timer and remove it as the browser would.
   function tick(milliseconds) {
     const entry = [...timers].find(([, timer]) => timer.milliseconds === milliseconds)
     assert.ok(entry, `No existe espera de ${milliseconds}`)
@@ -61,10 +61,10 @@ function setup(synchronize) {
   return { connection, timers, states, results, statuses, tick, sockets: FakeWebSocket.instances }
 }
 
-// Permite finalizar las promesas de apertura sin esperas reales.
+// Flush connection promises without real delays.
 async function flush() { await Promise.resolve(); await Promise.resolve() }
 
-// Verifica el retroceso progresivo y que error y cierre no dupliquen reintentos.
+// Verify progressive backoff and that error and close events do not duplicate retries.
 test('reintenta con esperas progresivas limitadas y un solo transporte', async () => {
   const s = setup()
   for (const delay of [1000, 2000, 4000, 8000, 16000, 30000, 30000]) {
@@ -81,7 +81,7 @@ test('reintenta con esperas progresivas limitadas y un solo transporte', async (
   assert.equal(s.timers.size, 0)
 })
 
-// Comprueba el limite de apertura y la cancelacion definitiva al abandonar la vista.
+// Check connection timeouts and permanent cancellation when leaving the view.
 test('cancela conexion pendiente, reintentos y eventos tardios al salir', async () => {
   const s = setup()
   s.tick(12000)
@@ -94,7 +94,7 @@ test('cancela conexion pendiente, reintentos y eventos tardios al salir', async 
   assert.equal(s.states.at(-1), 'disconnected')
 })
 
-// Conserva eventos recibidos durante la consulta y recupera la instantanea antes de ocultar el aviso.
+// Retain events received during loading and restore the snapshot before hiding the notice.
 test('sincroniza cada apertura y entrega resultados y estado acumulados', async () => {
   let resolve, calls = 0
   const s = setup(() => { calls++; return new Promise(done => { resolve = done }) })
@@ -115,7 +115,7 @@ test('sincroniza cada apertura y entrega resultados y estado acumulados', async 
   s.connection.close()
 })
 
-// Reintenta si HTTP falla aunque el socket se haya abierto y descarta consultas caducadas.
+// Retry after HTTP failures even if the socket opened, and discard expired queries.
 test('no confirma conexiones sin sincronizar y caduca las consultas lentas', async () => {
   let valid, resolve
   const s = setup(isCurrent => { valid = isCurrent; return new Promise(done => { resolve = done }) })
@@ -131,7 +131,7 @@ test('no confirma conexiones sin sincronizar y caduca las consultas lentas', asy
   failed.connection.close()
 })
 
-// Ignora mensajes corruptos y mantiene los eventos existentes tras recuperarse.
+// Ignore malformed messages while preserving existing events after recovery.
 test('ignora mensajes invalidos sin interrumpir el directo', async () => {
   const s = setup(); s.sockets[0].open(); await flush()
   s.sockets[0].dispatchEvent(new MessageEvent('message', { data: 'invalid' }))

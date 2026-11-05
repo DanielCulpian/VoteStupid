@@ -4,12 +4,12 @@ import { useRoute } from 'vue-router'
 
 const route = useRoute()
 
-// Mantiene un título descriptivo también en la primera carga de la portada.
+// Keep the page title descriptive, including the initial home page load.
 watch(() => route.meta.title, title => {
   document.title = `${String(title ?? 'Inicio')} | VoteStupid`
 }, { immediate: true })
 
-// Sitúa el foco en el contenido al navegar entre vistas de la aplicación.
+// Move focus to the main content when navigating between application views.
 watch(() => route.path, async () => {
   await nextTick()
   document.getElementById('main-content')?.focus()

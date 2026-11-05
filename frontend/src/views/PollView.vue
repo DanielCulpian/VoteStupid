@@ -38,7 +38,7 @@ let connectionVersion = 0
 let isDisposed = false
 let deadlineTimer: ReturnType<typeof setTimeout> | undefined
 
-// Bloquea los controles al vencer el plazo aunque no se reciba un nuevo evento del servidor.
+// Disable controls when the deadline expires, even without a new server event.
 function scheduleDeadline() {
   clearTimeout(deadlineTimer)
   if (!poll.value?.is_active || !poll.value.closes_at || isDisposed) return
@@ -53,7 +53,7 @@ function scheduleDeadline() {
 
 const stopDeadline = watch(() => poll.value?.closes_at, scheduleDeadline)
 
-// Guarda las opciones del voto en el navegador para recuperarlas al volver a la votación.
+// Store the selected vote options in the browser for future visits.
 function saveVoteLocally(optionIds: string[]) {
   if (!poll.value) return
 
@@ -67,7 +67,7 @@ function saveVoteLocally(optionIds: string[]) {
   }
 }
 
-// Carga los resultados de la votación y actualiza los indicadores de carga y error.
+// Load poll results and update loading and error indicators.
 async function loadResults() {
   if (!poll.value) return
 
@@ -86,7 +86,7 @@ async function loadResults() {
   }
 }
 
-// Suscribe el estado y los resultados sin dejar que una conexión anterior cambie el aviso actual.
+// Subscribe to state and results without letting older connections change the current notice.
 function connectLive() {
   if (!poll.value || isDisposed) return
   const version = ++connectionVersion
@@ -94,13 +94,13 @@ function connectLive() {
   try {
     socket = connectToPoll(
       poll.value.id,
-      // Refleja los resultados recibidos y elimina errores de consultas anteriores.
+      // Apply received results and clear errors from earlier queries.
       updatedResults => {
         if (version !== connectionVersion || isDisposed) return
         results.value = updatedResults as PollResults
         resultsError.value = ''
       },
-      // Habilita o bloquea los controles cuando cambia el estado de la votación.
+      // Enable or disable controls when the poll state changes.
       isActive => {
         if (version === connectionVersion && !isDisposed && poll.value) {
           poll.value.is_active = isActive
@@ -110,11 +110,11 @@ function connectLive() {
             : 'La votación se ha cerrado. Ya no se pueden modificar los votos.'
         }
       },
-      // Mantiene visible el estado de conexión de la suscripción actual.
+      // Keep the connection status visible for the current subscription.
       state => {
         if (version === connectionVersion && !isDisposed) connectionState.value = state
       },
-      // Recupera los cambios perdidos sin alterar las opciones seleccionadas por el usuario.
+      // Recover missed changes without altering the user's selected options.
       async isCurrent => {
         if (isDisposed || version !== connectionVersion || !isCurrent()) return
         const id = String(route.params.id)
@@ -131,13 +131,13 @@ function connectLive() {
   }
 }
 
-// Reconecta el directo y recupera el estado y los resultados que pudieron cambiar durante el corte.
+// Reconnect live updates and recover state and results missed during the interruption.
 function reconnectLive() {
   if (!poll.value || isSubmitting.value || isDisposed) return
   connectLive()
 }
 
-// Carga la votación, recupera el voto local y permite reintentar si falla el enlace o el servidor.
+// Load the poll, restore the local vote, and allow retrying failed links or requests.
 async function loadPoll() {
   if (isLoading.value) return
   isLoading.value = true
@@ -197,7 +197,7 @@ async function loadPoll() {
 
 onMounted(loadPoll)
 
-// Cambia la selección de opciones solo si la votación está abierta.
+// Change selected options only while the poll is open.
 function toggleOption(optionId: string) {
   if (!poll.value || !poll.value.is_active || isSubmitting.value) return
 
@@ -230,12 +230,12 @@ function toggleOption(optionId: string) {
   selectedOptionIds.value = [...selected, optionId]
 }
 
-// Obtiene el texto de una opción del ranking para sus etiquetas y anuncios accesibles.
+// Retrieve ranking option text for accessible labels and announcements.
 function rankingOptionText(optionId: string): string {
   return poll.value?.options.find(option => option.id === optionId)?.text ?? 'Opción'
 }
 
-// Reordena el ranking, anuncia la nueva posición y mantiene el foco en la opción movida.
+// Reorder the ranking, announce its new position, and keep focus on the moved option.
 async function moveRanking(index: number, direction: number) {
   if (!poll.value?.is_active || isSubmitting.value) return
 
@@ -271,7 +271,7 @@ async function moveRanking(index: number, direction: number) {
   else alternate?.focus()
 }
 
-// Registra o actualiza el voto si la votación está abierta y no hay otro envío.
+// Create or update the vote only while the poll is open and no submission is pending.
 async function submitVote() {
   if (!poll.value || !poll.value.is_active || isSubmitting.value) return
   const restoreFocus = document.activeElement?.id === 'submit-vote'
@@ -321,7 +321,7 @@ async function submitVote() {
     }
   }
 }
-// Cierra el WebSocket al abandonar la vista para liberar la conexión.
+// Close the WebSocket when leaving the view to release the connection.
 onUnmounted(() => {
   isDisposed = true
   stopDeadline()
@@ -386,7 +386,7 @@ onUnmounted(() => {
           </span>
         </p>
 
-        <!-- ELECCIÓN ÚNICA Y MÚLTIPLE -->
+        <!-- SINGLE AND MULTIPLE CHOICE -->
         <div
           v-if="poll.poll_type !== 'ranking'"
           class="poll-options"
@@ -448,7 +448,7 @@ onUnmounted(() => {
           </li>
         </ol>
 
-        <!-- MENSAJES -->
+        <!-- MESSAGES -->
         <p
           v-if="errorMessage"
           class="error-message"
@@ -464,7 +464,7 @@ onUnmounted(() => {
           {{ successMessage }}
         </p>
 
-        <!-- BOTÓN DE VOTACIÓN -->
+        <!-- VOTE BUTTON -->
         <p v-if="isSubmitting" class="loading-message">Guardando tu voto...</p>
         <button
           v-if="poll.is_active"
@@ -490,7 +490,7 @@ onUnmounted(() => {
           Esta votación está cerrada.
         </p>
 
-        <!-- RESULTADOS -->
+        <!-- RESULTS -->
         <section class="results-section">
           <div class="results-header">
             <h2>Resultados</h2>

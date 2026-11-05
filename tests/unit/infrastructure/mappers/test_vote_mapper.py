@@ -3,7 +3,7 @@ from app.infrastructure.mappers.vote_mapper import to_model, to_entity
 
 
 def test_to_model_converts_vote_and_selections():
-    """Comprueba la conversión de un voto y sus selecciones a modelos SQLAlchemy."""
+    """Verify to model converts vote and selections."""
     from uuid import uuid4
 
     poll_id = uuid4()
@@ -29,7 +29,7 @@ def test_to_model_converts_vote_and_selections():
 
 
 def test_to_entity_converts_vote_and_preserves_selection_order():
-    """Comprueba que la conversión del voto conserva el orden de sus selecciones."""
+    """Verify to entity converts vote and preserves selection order."""
     from uuid import uuid4
 
     poll_id = uuid4()

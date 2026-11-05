@@ -18,7 +18,7 @@ class Vote:
     )
 
     def __post_init__(self):
-        """Valida el hash del participante y exige una selección no vacía y sin duplicados."""
+        """Validate the voter hash and require a nonempty selection without duplicates."""
         if not self.voter_token_hash.strip():
             raise ValueError("El identificador del votante no puede estar vacío.")
 
@@ -29,7 +29,7 @@ class Vote:
             raise ValueError("Un voto no puede contener opciones duplicadas.")
 
     def update_selection(self, selected_option_ids: list[UUID]) -> None:
-        """Valida la nueva selección del voto y actualiza su fecha de modificación."""
+        """Validate the new vote selection and update its modification timestamp."""
         if not selected_option_ids:
             raise ValueError("Un voto debe contener al menos una opción.")
 

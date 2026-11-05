@@ -9,8 +9,8 @@ from app.domain.repositories.poll_repository import PollRepository
 
 
 def test_get_poll_returns_poll_when_it_exists():
-    """Comprueba que la consulta de votaciones devuelve la votación cuando existe."""
-    # Arrange: preparamos una votación y un repositorio simulado.
+    """Verify get poll returns poll when it exists."""
+    # Arrange: prepare a poll and a mock repository.
     poll_id = uuid4()
 
     poll = Poll(
@@ -27,17 +27,17 @@ def test_get_poll_returns_poll_when_it_exists():
 
     use_case = GetPoll(repository)
 
-    # Act: ejecutamos el caso de uso.
+    # Act: execute the use case.
     result = use_case.execute(poll_id)
 
-    # Assert: comprobamos el resultado y la llamada al repositorio.
+    # Assert: check the result and repository call.
     assert result is poll
     repository.get_by_id.assert_called_once_with(poll_id)
 
 
 def test_get_poll_returns_none_when_poll_does_not_exist():
-    """Comprueba que la consulta de votaciones devuelve None cuando la votación no existe."""
-    # Arrange: simulamos que el repositorio no encuentra la votación.
+    """Verify get poll returns none when poll does not exist."""
+    # Arrange: simulate a repository that cannot find the poll.
     poll_id = uuid4()
 
     repository = create_autospec(PollRepository, instance=True)
@@ -45,9 +45,9 @@ def test_get_poll_returns_none_when_poll_does_not_exist():
 
     use_case = GetPoll(repository)
 
-    # Act: ejecutamos el caso de uso.
+    # Act: execute the use case.
     result = use_case.execute(poll_id)
 
-    # Assert: comprobamos que devuelve None.
+    # Assert: verify that the result is None.
     assert result is None
     repository.get_by_id.assert_called_once_with(poll_id)

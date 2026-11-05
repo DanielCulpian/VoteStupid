@@ -16,7 +16,7 @@ HEADERS = {"X-Requested-With": "VoteStupid", "Origin": "http://localhost:5173"}
 
 @pytest.fixture
 def private_client(db_session, monkeypatch):
-    """Ejecuta la autenticación real contra PostgreSQL sin sustituir sus controles de acceso."""
+    """Exercise real authentication against PostgreSQL without overriding access controls."""
     monkeypatch.setenv("ADMIN_PASSWORD_HASH", HASH)
     monkeypatch.setenv("ADMIN_COOKIE_SECURE", "false")
     monkeypatch.setenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173")
@@ -28,21 +28,21 @@ def private_client(db_session, monkeypatch):
 
 
 def sign_in(client):
-    """Autentica al administrador mediante el endpoint real y su cookie."""
+    """Authenticate the administrator through the real endpoint and its cookie."""
     response = client.post("/api/admin/auth/login", json={"password": PASSWORD})
     assert response.status_code == 200
     return response
 
 
 def create(client, kind="single_choice", **extra):
-    """Crea una votación mediante una sesión administrativa válida."""
+    """Create a poll using a valid administrative session."""
     response = client.post("/api/polls", json={"title": "Catálogo privado", "poll_type": kind, "option_texts": ["A", "B"], **extra})
     assert response.status_code == 201
     return response.json()
 
 
 def test_visitors_cannot_create_or_manage_even_with_individual_token(private_client):
-    """Rechaza peticiones directas sin sesión y permite seguir consultando y votando."""
+    """Verify visitors cannot create or manage even with individual token."""
     client, _ = private_client
     assert client.post("/api/polls", json={}).status_code == 401
     assert client.get("/api/admin/polls").status_code == 401
@@ -58,7 +58,7 @@ def test_visitors_cannot_create_or_manage_even_with_individual_token(private_cli
 
 
 def test_cookies_logout_expiry_rotation_and_old_polls(private_client, monkeypatch):
-    """Comprueba cookies, revocación, caducidad y acceso recuperable sin el token individual."""
+    """Verify cookies logout expiry rotation and old polls."""
     client, db = private_client
     response = sign_in(client)
     cookie = response.headers["set-cookie"]
@@ -88,7 +88,7 @@ def test_cookies_logout_expiry_rotation_and_old_polls(private_client, monkeypatc
 
 
 def test_login_is_throttled_and_csrf_and_missing_configuration_fail_closed(private_client, monkeypatch):
-    """Rechaza formularios ajenos y configuración ausente y limita intentos de contraseña."""
+    """Verify login is throttled and csrf and missing configuration fail closed."""
     client, _ = private_client
     assert client.post("/api/admin/auth/login", headers={"Origin": "https://evil.example"}, json={"password": PASSWORD}).status_code == 403
     monkeypatch.delenv("ADMIN_PASSWORD_HASH")
@@ -104,7 +104,7 @@ def test_login_is_throttled_and_csrf_and_missing_configuration_fail_closed(priva
 
 
 def test_catalog_filters_pagination_privacy_and_websocket(private_client):
-    """Comprueba filtros combinados, paginación, cierres programados y avisos de catálogo."""
+    """Verify catalog filters pagination privacy and websocket."""
     client, _ = private_client
     sign_in(client)
     with client.websocket_connect("/api/polls/catalog/ws", headers={"Origin": "http://localhost:5173"}) as socket:
@@ -136,7 +136,7 @@ def test_catalog_filters_pagination_privacy_and_websocket(private_client):
 
 
 def test_secure_cookie_is_default_and_cannot_authorize_plain_http(private_client, monkeypatch):
-    """Mantiene Secure por defecto y comprueba que el navegador no envía esa cookie por HTTP."""
+    """Verify secure cookie is default and cannot authorize plain http."""
     client, _ = private_client
     monkeypatch.delenv('ADMIN_COOKIE_SECURE')
     response = sign_in(client)
@@ -146,7 +146,7 @@ def test_secure_cookie_is_default_and_cannot_authorize_plain_http(private_client
 
 
 def test_same_site_without_custom_header_cannot_login_or_mutate(private_client):
-    """Rechaza peticiones simples incluso cuando el origen coincide y existe una cookie válida."""
+    """Verify same site without custom header cannot login or mutate."""
     client, _ = private_client
     client.headers.pop('X-Requested-With')
     assert client.post('/api/admin/auth/login', json={'password': PASSWORD}).status_code == 403
@@ -159,7 +159,7 @@ def test_same_site_without_custom_header_cannot_login_or_mutate(private_client):
 
 
 def test_reopen_expired_poll_retires_deadline_and_allows_voting(private_client):
-    """Reabrir una votación vencida debe permitir votar y coincidir en detalle y catálogo."""
+    """Verify reopen expired poll retires deadline and allows voting."""
     client, _ = private_client
     sign_in(client)
     poll = create(client, closes_at=(datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat())

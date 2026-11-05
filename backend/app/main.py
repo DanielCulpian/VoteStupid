@@ -12,7 +12,7 @@ from app.presentation.api.auth_routes import router as auth_router
 
 
 async def validation_error(request: Request, error: RequestValidationError):
-    """Devuelve errores de validación sin repetir valores, tokens ni contexto interno."""
+    """Return validation errors without echoing input values, tokens, or internal context."""
     fields = {"body", "path", "query", "header", "poll_id", "title", "description",
               "option_texts", "poll_type", "max_selections", "closes_at",
               "selected_option_ids", "X-Admin-Token", "X-Voter-Token"}
@@ -24,7 +24,7 @@ async def validation_error(request: Request, error: RequestValidationError):
 
 
 def create_app() -> FastAPI:
-    """Construye una API con protecciones activas y estado aislado por instancia."""
+    """Build an API with active protections and isolated state for each instance."""
     application = FastAPI(title="VoteStupid", description="Votaciones anónimas para amigos.")
     origins = allowed_origins()
     limiter = RateLimiter()

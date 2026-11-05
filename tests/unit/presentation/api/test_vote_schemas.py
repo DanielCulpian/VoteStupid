@@ -9,7 +9,7 @@ from app.presentation.api.schemas import (
 
 
 def test_cast_vote_request_accepts_valid_selection():
-    """Comprueba que el esquema de registro de votos acepta una selección válida."""
+    """Verify cast vote request accepts valid selection."""
     option_id = uuid4()
 
     request = CastVoteRequest(
@@ -20,13 +20,13 @@ def test_cast_vote_request_accepts_valid_selection():
 
 
 def test_cast_vote_request_rejects_empty_selection():
-    """Comprueba que el esquema de registro de votos rechaza una selección vacía."""
+    """Verify cast vote request rejects empty selection."""
     with pytest.raises(ValidationError):
         CastVoteRequest(selected_option_ids=[])
 
 
 def test_update_vote_request_accepts_valid_selection():
-    """Comprueba que el esquema de actualización de votos acepta una selección válida."""
+    """Verify update vote request accepts valid selection."""
     option_id = uuid4()
 
     request = UpdateVoteRequest(
@@ -37,6 +37,6 @@ def test_update_vote_request_accepts_valid_selection():
 
 
 def test_update_vote_request_rejects_empty_selection():
-    """Comprueba que el esquema de actualización de votos rechaza una selección vacía."""
+    """Verify update vote request rejects empty selection."""
     with pytest.raises(ValidationError):
         UpdateVoteRequest(selected_option_ids=[])

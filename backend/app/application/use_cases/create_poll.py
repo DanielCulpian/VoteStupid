@@ -15,7 +15,7 @@ from app.infrastructure.security.admin_token import (
 class CreatePoll:
 
     def __init__(self, poll_repository: PollRepository):
-        """Recibe las dependencias necesarias para ejecutar el caso de uso."""
+        """Receive the dependencies required to execute the use case."""
         self.poll_repository = poll_repository
 
     def execute(
@@ -27,18 +27,18 @@ class CreatePoll:
         max_selections: int | None = None,
         closes_at: datetime | None = None
     ) -> CreatedPoll:
-        """Crea y guarda la votación y devuelve su token privado de administración."""
+        """Create and persist a poll, returning its private administration token."""
 
-        # 1. Generar el secreto de administración.
+        # 1. Generate the administration secret.
         admin_token = generate_admin_token()
 
-        # 2. Crear las opciones.
+        # 2. Create the options.
         options = [
             Option(text=option_text)
             for option_text in option_texts
         ]
 
-        # 3. Crear la votación con el hash del secreto.
+        # 3. Create the poll with the hashed secret.
         poll = Poll(
             title=title,
             poll_type=poll_type,
@@ -49,10 +49,10 @@ class CreatePoll:
             admin_token_hash=hash_admin_token(admin_token),
         )
 
-        # 4. Guardar la votación.
+        # 4. Save the poll.
         self.poll_repository.save_poll(poll)
 
-        # 5. Devolver la votación y el secreto original.
+        # 5. Return the poll and the original secret.
         return CreatedPoll(
             poll=poll,
             admin_token=admin_token,

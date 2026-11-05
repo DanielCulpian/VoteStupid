@@ -21,7 +21,7 @@ const createdPoll = ref<PollResponse | null>(null)
 const invalidField = ref('')
 const formAnnouncement = ref('')
 
-// Anuncia el error de validación y lleva el foco al campo que necesita corrección.
+// Announce the validation error and focus the field that needs correction.
 async function showValidationError(message: string, fieldId: string) {
   errorMessage.value = message
   invalidField.value = fieldId
@@ -29,7 +29,7 @@ async function showValidationError(message: string, fieldId: string) {
   document.getElementById(fieldId)?.focus()
 }
 
-// Añade una opción vacía al formulario de creación de votaciones.
+// Add an empty option to the poll creation form.
 async function addOption() {
   if (isSubmitting.value) return
   options.value.push('')
@@ -38,7 +38,7 @@ async function addOption() {
   document.getElementById(`option-${options.value.length - 1}`)?.focus()
 }
 
-// Elimina una opción del formulario conservando al menos dos opciones.
+// Remove a form option while retaining at least two options.
 async function removeOption(index: number) {
   if (isSubmitting.value || options.value.length <= 2) return
   options.value.splice(index, 1)
@@ -47,7 +47,7 @@ async function removeOption(index: number) {
   document.getElementById(`option-${Math.min(index, options.value.length - 1)}`)?.focus()
 }
 
-// Valida el formulario, crea la votación y prepara sus enlaces público y de administración.
+// Validate the form, create the poll, and prepare its public and administrative links.
 async function submitPoll() {
   if (isSubmitting.value) return
   errorMessage.value = ''

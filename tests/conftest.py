@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.infrastructure.database.session import get_database_url
 from app.infrastructure.models.base import Base
 
-# Importamos los modelos para registrar todas las tablas.
+# Import the models to register every table.
 from app.infrastructure.models.poll_model import PollModel
 from app.infrastructure.models.option_model import OptionModel
 from app.infrastructure.models.vote_model import VoteModel
@@ -17,11 +17,11 @@ from app.infrastructure.models.vote_selection_model import VoteSelectionModel
 
 @pytest.fixture(autouse=True)
 def isolate_api_limits():
-    """Aísla los cupos entre pruebas sin desactivar la protección de la aplicación."""
+    """Isolate rate quotas between tests without disabling application protections."""
     from app.main import app
     from app.infrastructure.security.admin_session import require_admin_session
-    # Las regresiones anteriores representan a un organizador autenticado.
-    # Las nuevas pruebas de autenticación usan instancias sin esta sustitución.
+    # Earlier regression tests represent an authenticated organizer.
+    # New authentication tests use instances without this override.
     app.dependency_overrides[require_admin_session] = lambda: None
     app.state.rate_limiter.clear()
     yield
@@ -31,7 +31,7 @@ def isolate_api_limits():
 
 @pytest.fixture(scope="session")
 def test_engine():
-    """Prepara el motor de votestupid_test y crea y elimina las tablas de la sesión de pruebas."""
+    """Prepare the votestupid_test engine and create and drop the session's test tables."""
     database_url = make_url(get_database_url()).set(
         database="votestupid_test",
         host="127.0.0.1"
@@ -48,23 +48,23 @@ def test_engine():
         connect_args={"connect_timeout": 5}
     )
 
-    # Comprobamos la conexión antes de crear las tablas.
+    # Check the connection before creating tables.
     with engine.connect() as connection:
         connection.execute(text("SELECT 1"))
 
-    # Creamos las tablas necesarias para los tests.
+    # Create the tables required by the tests.
     Base.metadata.create_all(bind=engine)
 
     yield engine
 
-    # Eliminamos las tablas al finalizar la sesión de tests.
+    # Drop the tables when the test session finishes.
     Base.metadata.drop_all(bind=engine)
     engine.dispose()
 
 
 @pytest.fixture
 def db_session(test_engine):
-    """Proporciona una sesión de base de datos para la prueba y la cierra al finalizar."""
+    """Provide a database session for the test and close it afterwards."""
     session = Session(test_engine)
 
     try:

@@ -2,7 +2,7 @@ const assert = require('node:assert/strict')
 const { test } = require('node:test')
 const { loadView } = require('./helpers/loadView.cjs')
 
-// Proporciona los servicios de la vista pública sin realizar peticiones ni abrir conexiones.
+// Provide public view services without requests or external connections.
 function pollServices() {
   return {
     '../services/pollService': {},
@@ -12,12 +12,12 @@ function pollServices() {
   }
 }
 
-// Comprueba que un error del formulario señala el campo y permite corregirlo con el teclado.
+// Verify that form errors identify the field and allow keyboard correction.
 test('sitúa el foco en el primer campo inválido y conserva su explicación', async () => {
   const focused = []
   const view = loadView('CreatePollView.vue', { '../services/pollService': {} }, {
     document: {
-      // Registra el campo que recibirá el foco tras la validación.
+      // Record the field that receives focus after validation.
       getElementById: id => ({ focus: () => focused.push(id) }),
     },
   })
@@ -33,12 +33,12 @@ test('sitúa el foco en el primer campo inválido y conserva su explicación', a
   assert.equal(focused.at(-1), 'option-1')
 })
 
-// Comprueba que añadir o eliminar opciones conserva un punto de continuación para el teclado.
+// Verify that adding or removing options preserves a keyboard navigation target.
 test('mantiene el foco en una opción existente al añadir y eliminar filas', async () => {
   const focused = []
   const view = loadView('CreatePollView.vue', { '../services/pollService': {} }, {
     document: {
-      // Captura el identificador de la opción que recibe el foco.
+      // Capture the identifier of the option receiving focus.
       getElementById: id => ({ focus: () => focused.push(id) }),
     },
   })
@@ -52,15 +52,15 @@ test('mantiene el foco en una opción existente al añadir y eliminar filas', as
   assert.match(view.formAnnouncement.value, /Quedan 2 opciones/)
 })
 
-// Comprueba que mover una opción al extremo mantiene el foco en una acción que sigue habilitada.
+// Verify that moving an option to an edge keeps focus on an enabled action.
 test('anuncia la posición del ranking y evita perder el foco en un botón desactivado', async () => {
   const focused = []
   const view = loadView('PollView.vue', pollServices(), {
     document: {
-      // Simula que subir deja de estar disponible cuando la opción llega al primer puesto.
+      // Simulate the up control becoming unavailable when the option reaches first place.
       getElementById: id => ({
         disabled: id.endsWith('-up'),
-        // Registra el control disponible al que se devuelve el foco.
+        // Record the available control that receives focus.
         focus: () => focused.push(id),
       }),
     },

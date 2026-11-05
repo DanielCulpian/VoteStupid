@@ -13,26 +13,26 @@ from app.domain.repositories.poll_repository import PollRepository
 class FakePollRepository(PollRepository):
 
     def __init__(self, poll=None, votes=None):
-        """Inicializa el almacenamiento en memoria del repositorio de prueba."""
+        """Initialize the test repository's in-memory storage."""
         self.poll = poll
         self.votes = votes or []
 
     def get_by_id(self, poll_id: UUID):
-        """Busca la votación en el repositorio simulado."""
+        """Find the poll in the mock repository."""
         if self.poll and self.poll.id == poll_id:
             return self.poll
         return None
 
     def get_vote_by_voter(self, poll_id: UUID, voter_token_hash: str):
-        """Simula que no existe un voto del participante para este escenario de prueba."""
+        """Simulate a participant without an existing vote for this test scenario."""
         return None
 
     def save_vote(self, vote: Vote) -> None:
-        """Completa el contrato del repositorio sin realizar operaciones en este escenario de prueba."""
+        """Satisfy the repository contract without performing operations in this scenario."""
         pass
 
     def update_vote(self, vote: Vote) -> None:
-        """Completa el contrato del repositorio sin realizar operaciones en este escenario de prueba."""
+        """Satisfy the repository contract without performing operations in this scenario."""
         pass
 
     def get_options_by_ids(
@@ -40,24 +40,24 @@ class FakePollRepository(PollRepository):
         poll_id: UUID,
         option_ids: list[UUID]
     ) -> list[UUID]:
-        """Simula una consulta sin resultados para este escenario de prueba."""
+        """Simulate an empty query result for this test scenario."""
         return []
 
     def update_poll(self, poll: Poll) -> None:
-        """Completa el contrato del repositorio sin realizar operaciones en este escenario de prueba."""
+        """Satisfy the repository contract without performing operations in this scenario."""
         pass
 
     def save_poll(self, poll: Poll) -> None:
-        """Completa el contrato del repositorio sin realizar operaciones en este escenario de prueba."""
+        """Satisfy the repository contract without performing operations in this scenario."""
         pass
 
     def get_votes_by_poll(self, poll_id: UUID) -> list[Vote]:
-        """Devuelve los votos preparados para el escenario de resultados."""
+        """Return the votes prepared for the results scenario."""
         return self.votes
 
 
 def create_poll(poll_type: PollType, options: list[Option]) -> Poll:
-    """Construye una votación y sus opciones para preparar el escenario de prueba."""
+    """Build a poll and its options for the test scenario."""
     return Poll(
         title="Votación de prueba",
         poll_type=poll_type,
@@ -66,7 +66,7 @@ def create_poll(poll_type: PollType, options: list[Option]) -> Poll:
 
 
 def create_vote(poll: Poll, selected_options: list[Option], token: str) -> Vote:
-    """Construye un voto de prueba con las selecciones indicadas."""
+    """Build a test vote with the supplied selections."""
     return Vote(
         poll_id=poll.id,
         voter_token_hash=token,
@@ -75,7 +75,7 @@ def create_vote(poll: Poll, selected_options: list[Option], token: str) -> Vote:
 
 
 def test_get_results_for_single_choice():
-    """Comprueba los votos y porcentajes de una votación de elección única."""
+    """Verify get results for single choice."""
     options = [Option("A"), Option("B"), Option("C")]
     poll = create_poll(PollType.SINGLE_CHOICE, options)
 
@@ -100,7 +100,7 @@ def test_get_results_for_single_choice():
 
 
 def test_get_results_for_multiple_choice():
-    """Comprueba los votos y porcentajes de una votación de elección múltiple."""
+    """Verify get results for multiple choice."""
     options = [Option("A"), Option("B"), Option("C")]
     poll = create_poll(PollType.MULTIPLE_CHOICE, options)
 
@@ -123,7 +123,7 @@ def test_get_results_for_multiple_choice():
 
 
 def test_get_results_for_ranking():
-    """Comprueba los puntos y porcentajes de una votación por ranking."""
+    """Verify get results for ranking."""
     options = [Option("A"), Option("B"), Option("C")]
     poll = create_poll(PollType.RANKING, options)
 
@@ -149,7 +149,7 @@ def test_get_results_for_ranking():
 
 
 def test_get_results_without_votes():
-    """Comprueba que los resultados son cero cuando no hay votos."""
+    """Verify get results without votes."""
     options = [Option("A"), Option("B")]
     poll = create_poll(PollType.SINGLE_CHOICE, options)
 
@@ -166,7 +166,7 @@ def test_get_results_without_votes():
 
 
 def test_get_results_for_nonexistent_poll():
-    """Comprueba que el cálculo devuelve None para una votación inexistente."""
+    """Verify get results for nonexistent poll."""
     repository = FakePollRepository()
     use_case = GetPollResults(repository)
 

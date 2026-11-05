@@ -5,7 +5,7 @@ const { loadView, deferred } = require('./helpers/loadView.cjs')
 
 const poll = { id: 'poll-1', title: 'Prueba', is_active: true, closes_at: null, poll_type: 'single_choice', created_at: '2026-01-01T00:00:00Z' }
 
-// Retira el fragmento secreto conservando el estado que necesita Vue Router para navegar.
+// Remove the secret fragment while preserving Vue Router's navigation state.
 test('retira el token de la dirección sin borrar el historial del router', async () => {
   const routerState = { position: 2, back: '/admin', current: '/admin/poll-1' }
   let replaced
@@ -25,7 +25,7 @@ test('retira el token de la dirección sin borrar el historial del router', asyn
 })
 
 for (const filename of ['PollView.vue', 'AdminView.vue']) {
-  // Comprueba el cierre por fecha y la cancelación del temporizador al abandonar la vista.
+  // Verify deadline closure and timer cancellation when the view is unmounted.
   test(`${filename}: cierra al vencer el plazo y cancela las esperas al salir`, async () => {
     let unmount, callback, cleared = 0
     const view = loadView(filename, {
@@ -53,14 +53,14 @@ for (const filename of ['PollView.vue', 'AdminView.vue']) {
   })
 }
 
-// Ejecuta el catálogo real con reloj, ciclo de vida y transporte controlados.
+// Execute the real catalog with a controlled clock, lifecycle, and transport.
 function catalog(getCatalog = async () => ({ items: [poll], total: 1 })) {
   let mount, unmount, callbacks, closed = 0, nextTimer = 0
   const timers = new Map()
   const view = loadView('../components/PollCatalog.vue', {
     '../services/catalogService': { getCatalog },
     '../services/websocketService': {
-      // Captura suscripciones para comprobar cancelación y recuperación sin conexiones reales.
+      // Capture subscriptions to check cancellation and recovery without real connections.
       connectToPoll: (...args) => { callbacks = args; return { close() { closed++ } } },
     },
   }, {
@@ -72,7 +72,7 @@ function catalog(getCatalog = async () => ({ items: [poll], total: 1 })) {
   return { view, mount: () => mount(), unmount: () => unmount(), callbacks: () => callbacks, timers, closed: () => closed }
 }
 
-// Comprueba que una respuesta antigua no sustituye los resultados de filtros nuevos.
+// Verify that older responses cannot replace results for newer filters.
 test('el catálogo descarta respuestas tardías de filtros anteriores', async () => {
   const slow = deferred()
   let calls = 0
@@ -84,7 +84,7 @@ test('el catálogo descarta respuestas tardías de filtros anteriores', async ()
   c.unmount()
 })
 
-// Verifica filtros combinados y limpieza reactiva, también ante un fallo del servidor.
+// Check combined filters and reactive resets, including server failures.
 test('cambia y limpia filtros sin conservar tarjetas que no coinciden', async () => {
   const calls = []
   let fail = false
@@ -101,7 +101,7 @@ test('cambia y limpia filtros sin conservar tarjetas que no coinciden', async ()
   c.unmount()
 })
 
-// Impide tarjetas repetidas si una votación cambia de posición entre páginas.
+// Prevent duplicate cards when a poll changes position between pages.
 test('pagina sin duplicar tarjetas y conserva el total del servidor', async () => {
   const c = catalog(async (_, __, offset) => ({ items: offset ? [poll, { ...poll, id: 'second' }] : [poll], total: 2 }))
   await c.view.load(); await c.view.load(true)
@@ -110,7 +110,7 @@ test('pagina sin duplicar tarjetas y conserva el total del servidor', async () =
   c.unmount()
 })
 
-// Mantiene un único temporizador de actualización ante varios eventos del catálogo.
+// Keep one refresh timer for consecutive catalog events.
 test('agrupa cambios de estado y cancela la conexión y esperas al salir', async () => {
   const c = catalog()
   c.mount(); await Promise.resolve()
@@ -122,7 +122,7 @@ test('agrupa cambios de estado y cancela la conexión y esperas al salir', async
   assert.equal(c.closed(), 1); assert.equal(c.timers.size, 0)
 })
 
-// Evita conexiones duplicadas cuando el usuario pulsa el reintento manual.
+// Prevent duplicate connections when the user retries manually.
 test('el reintento manual sustituye el transporte anterior', () => {
   const c = catalog()
   c.view.reconnect(); c.view.reconnect()
@@ -130,7 +130,7 @@ test('el reintento manual sustituye el transporte anterior', () => {
   c.unmount(); assert.equal(c.closed(), 2)
 })
 
-// Evita que consultas de un transporte ya caducado actualicen las tarjetas.
+// Prevent stale transport queries from updating catalog cards.
 test('descarta una sincronización invalidada y una respuesta posterior al desmontaje', async () => {
   const request = deferred()
   const c = catalog(() => request.promise)
@@ -143,7 +143,7 @@ test('descarta una sincronización invalidada y una respuesta posterior al desmo
   assert.equal(c.view.items.value.length, 0)
 })
 
-// El organizador ya no depende de almacenamiento local ni conserva tokens de creación.
+// Verify that organizers no longer depend on local storage or retain creation tokens.
 test('crea enlaces sin secreto y no guarda tokens en el navegador', async () => {
   const view = loadView('CreatePollView.vue', {
     '../services/pollService': { createPoll: async () => ({ ...poll, admin_token: 'must-not-persist' }) },
@@ -158,7 +158,7 @@ test('crea enlaces sin secreto y no guarda tokens en el navegador', async () => 
   assert.doesNotMatch(view.adminUrl.value, /token|must-not-persist/)
 })
 
-// Mantiene la explicación de errores de consulta y permite recuperar la lista sin recargar.
+// Preserve query error explanations and allow list recovery without reloading.
 test('recupera el catálogo después de un error y representa listas vacías', async () => {
   let fail = true
   const c = catalog(async () => { if (fail) throw new Error('Sin conexión'); return { items: [], total: 0 } })

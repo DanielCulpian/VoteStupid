@@ -9,12 +9,12 @@ from app.domain.entities.vote import Vote
 class PollRepository(ABC):
 
     def list_polls(self, state: str, poll_type: str | None, offset: int, limit: int):
-        """Consulta un catálogo paginado sin incluir votos ni credenciales."""
+        """Query a paginated catalog without including votes or credentials."""
         raise NotImplementedError
 
     @abstractmethod
     def get_by_id(self, poll_id: UUID) -> Poll | None:
-        """Obtiene una votación por su identificador o devuelve None si no existe."""
+        """Retrieve a poll by its identifier, or return None if it does not exist."""
         pass
 
     @abstractmethod
@@ -23,17 +23,17 @@ class PollRepository(ABC):
         poll_id: UUID,
         voter_token_hash: str
     ) -> Vote | None:
-        """Busca el voto de un participante mediante la votación y el hash de su token."""
+        """Find a participant's vote using the poll and the hash of their token."""
         pass
 
     @abstractmethod
     def save_vote(self, vote: Vote) -> None:
-        """Guarda un nuevo voto con sus opciones seleccionadas."""
+        """Persist a new vote with its selected options."""
         pass
 
     @abstractmethod
     def update_vote(self, vote: Vote) -> None:
-        """Sustituye las selecciones del voto existente y guarda su fecha de modificación."""
+        """Replace the existing vote selections and persist the modification timestamp."""
         pass
 
     @abstractmethod
@@ -42,20 +42,20 @@ class PollRepository(ABC):
         poll_id: UUID,
         option_ids: list[UUID]
     ) -> list[UUID]:
-        """Devuelve los identificadores solicitados que pertenecen a la votación, en su orden."""
+        """Return the requested identifiers that belong to the poll, in their original order."""
         pass
 
     @abstractmethod
     def update_poll(self, poll: Poll) -> None:
-        """Define la actualización de una votación en el repositorio."""
+        """Define how a poll is updated in the repository."""
         pass
 
     @abstractmethod
     def save_poll(self, poll: Poll) -> None:
-        """Guarda una nueva votación con sus opciones."""
+        """Persist a new poll and its options."""
         pass
 
     @abstractmethod
     def get_votes_by_poll(self, poll_id: UUID) -> list[Vote]:
-        """Obtiene los votos de una votación con sus selecciones ordenadas."""
+        """Retrieve a poll's votes with their selections in order."""
         pass

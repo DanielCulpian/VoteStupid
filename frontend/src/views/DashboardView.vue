@@ -7,7 +7,7 @@ const router = useRouter()
 const busy = ref(false)
 const error = ref('')
 
-// Revoca la sesión antes de abandonar la zona privada y conserva el error si falla.
+// Revoke the session before leaving the private area and preserve any failure message.
 async function signOut() {
   if (busy.value) return
   busy.value = true; error.value = ''

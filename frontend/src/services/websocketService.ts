@@ -4,7 +4,7 @@ const WS_URL = API_URL.replace(/^http/, 'ws')
 export type RealtimeConnectionState = 'connecting' | 'connected' | 'disconnected'
 export interface PollConnection { close: () => void }
 
-// Mantiene una única conexión y recupera los datos perdidos antes de confirmar la reconexión.
+// Maintain one connection and recover missed data before confirming reconnection.
 export function connectToPoll(
   pollId: string,
   onResultsUpdated: (results: unknown) => void,
@@ -18,7 +18,7 @@ export function connectToPoll(
   let retry: ReturnType<typeof setTimeout> | undefined
   let timeout: ReturnType<typeof setTimeout> | undefined
 
-  // Programa un solo reintento con espera progresiva y un máximo de treinta segundos.
+  // Schedule one retry with progressive delays capped at thirty seconds.
   function scheduleRetry() {
     if (stopped || retry !== undefined) return
     onConnectionStateChanged?.('disconnected')
@@ -28,7 +28,7 @@ export function connectToPoll(
     }, Math.min(1000 * 2 ** Math.min(attempts++, 5), 30000))
   }
 
-  // Abre el transporte y descarta eventos de conexiones sustituidas o ya canceladas.
+  // Open the transport and discard events from replaced or cancelled connections.
   function open() {
     if (stopped) return
     let current: WebSocket
@@ -42,7 +42,7 @@ export function connectToPoll(
     let synchronized = false
     const pending: MessageEvent[] = []
 
-    // Cierra el intento fallido y libera su temporizador antes de volver a conectar.
+    // Close the failed attempt and clear its timer before retrying.
     function fail() {
       if (stopped || socket !== current) return
       socket = null
@@ -52,7 +52,7 @@ export function connectToPoll(
     }
 
     timeout = setTimeout(fail, 12000)
-    // Recupera una instantánea y después aplica los eventos recibidos durante la consulta.
+    // Fetch a snapshot, then apply events received while the request was pending.
     current.addEventListener('open', async () => {
       if (stopped || socket !== current) return
       try {
@@ -70,14 +70,14 @@ export function connectToPoll(
     })
     current.addEventListener('close', fail)
     current.addEventListener('error', fail)
-    // Conserva los eventos concurrentes para que una respuesta HTTP no sobrescriba cambios nuevos.
+    // Retain concurrent events so an HTTP response cannot overwrite newer changes.
     current.addEventListener('message', event => {
       if (stopped || socket !== current) return
       if (!synchronized) pending.push(event)
       else deliver(event)
     })
 
-    // Valida los mensajes y conserva los dos eventos públicos existentes.
+    // Validate messages while preserving the two existing public event types.
     function deliver(event: MessageEvent) {
       try {
         const message: unknown = JSON.parse(event.data)
@@ -110,7 +110,7 @@ export function connectToPoll(
   onConnectionStateChanged?.('connecting')
   open()
   return {
-    // Cancela definitivamente el transporte y todos sus reintentos al salir de la página.
+    // Permanently stop the transport and all retries when leaving the page.
     close() {
       stopped = true
       clearTimeout(retry)

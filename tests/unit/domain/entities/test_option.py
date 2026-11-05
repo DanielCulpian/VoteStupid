@@ -3,7 +3,7 @@ import pytest
 from app.domain.entities.option import Option
 
 def test_create_valid_option():
-    """Comprueba la creación de una opción con texto válido."""
+    """Verify create valid option."""
     option = Option(text="Ir al cine")
 
     assert option.text == "Ir al cine"
@@ -11,6 +11,6 @@ def test_create_valid_option():
 
 
 def test_option_rejects_empty_text():
-    """Comprueba que la opción rechaza texto vacío."""
+    """Verify option rejects empty text."""
     with pytest.raises(ValueError):
         Option(text="   ")

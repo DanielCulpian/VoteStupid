@@ -13,13 +13,13 @@ from app.presentation.api.dependencies import get_poll_repository
 
 @contextmanager
 def independent_client(engine, repository_class=SqlAlchemyPollRepository):
-    """Crea una API con una sesión propia por petición para probar clientes concurrentes."""
+    """Create an API with one database session per request to test concurrent clients."""
     app = create_app()
     from app.infrastructure.security.admin_session import require_admin_session
     app.dependency_overrides[require_admin_session] = lambda: None
 
     def repository():
-        """Proporciona una transacción independiente y libera la sesión al finalizar."""
+        """Provide an independent transaction and release the session afterwards."""
         with Session(engine) as session:
             yield repository_class(session)
 
@@ -29,7 +29,7 @@ def independent_client(engine, repository_class=SqlAlchemyPollRepository):
 
 
 def create_poll(client, poll_type):
-    """Crea una votación de tres opciones y conserva la credencial solo en la prueba."""
+    """Create a three-option poll and retain the credential only within the test."""
     response = client.post("/api/polls", json={
         "title": "Flujo integral", "poll_type": poll_type, "option_texts": ["A", "B", "C"],
     })
@@ -43,7 +43,7 @@ def create_poll(client, poll_type):
     ("ranking", [[0, 1, 2], [1, 2, 0], [2, 0, 1]], [2, 1, 0], [1, 3, 5]),
 ])
 def test_full_flow_broadcasts_exact_results_to_all_clients(test_engine, poll_type, initial, updated, points):
-    """Verifica resultados exactos, dos suscriptores, aislamiento, rechazos y cierre/reapertura."""
+    """Verify full flow broadcasts exact results to all clients."""
     with independent_client(test_engine) as client:
         poll = create_poll(client, poll_type)
         other = create_poll(client, "single_choice")
@@ -72,7 +72,7 @@ def test_full_flow_broadcasts_exact_results_to_all_clients(test_engine, poll_typ
                 assert by_id[option_id]["percentage"] == pytest.approx(points[index] / denominator * 100)
                 assert by_id[option_id]["votes"] == (3 if poll_type == "ranking" else points[index])
 
-            # Un rechazo no modifica resultados ni introduce eventos extra en los sockets.
+            # A rejection must not change results or add extra socket events.
             duplicate = client.post(f"/api/polls/{poll_id}/votes", headers={"X-Voter-Token": "0" * 40},
                                     json={"selected_option_ids": [ids[position] for position in updated]})
             assert duplicate.status_code == 409
@@ -90,19 +90,19 @@ def test_full_flow_broadcasts_exact_results_to_all_clients(test_engine, poll_typ
             assert client.put(f"/api/admin/polls/{other['id']}/close",
                               headers={"X-Admin-Token": other["admin_token"]}).status_code == 200
             assert isolated.receive_json() == {"type": "poll_status_updated", "is_active": False}
-        # Una suscripción nueva vuelve a recibir eventos tras desconectar los clientes anteriores.
+        # A new subscription receives events after earlier clients disconnect.
         with client.websocket_connect(f"/api/polls/{poll_id}/ws") as restored:
             client.put(f"/api/admin/polls/{poll_id}/close", headers=admin)
             assert restored.receive_json() == {"type": "poll_status_updated", "is_active": False}
 
 
 def test_same_voter_concurrent_requests_return_conflict_instead_of_server_error(test_engine):
-    """Fuerza la carrera tras la consulta de duplicados y exige un solo voto y un HTTP 409."""
+    """Verify same voter concurrent requests return conflict instead of server error."""
     barrier = Barrier(2)
 
     class RacingRepository(SqlAlchemyPollRepository):
         def get_vote_by_voter(self, poll_id, voter_token_hash):
-            """Sincroniza las dos peticiones después de comprobar que aún no existe el voto."""
+            """Synchronize both requests after checking that the vote does not yet exist."""
             result = super().get_vote_by_voter(poll_id, voter_token_hash)
             barrier.wait(timeout=10)
             return result
@@ -111,7 +111,7 @@ def test_same_voter_concurrent_requests_return_conflict_instead_of_server_error(
         poll = create_poll(client, "single_choice")
 
     def vote():
-        """Envía el mismo token desde una API y una sesión SQL independientes."""
+        """Send the same token through independent API and SQL sessions."""
         with independent_client(test_engine, RacingRepository) as client:
             return client.post(f"/api/polls/{poll['id']}/votes", headers={"X-Voter-Token": "same-voter-" + "x" * 32},
                                json={"selected_option_ids": [poll["options"][0]["id"]]}).status_code
@@ -125,14 +125,14 @@ def test_same_voter_concurrent_requests_return_conflict_instead_of_server_error(
 
 @pytest.mark.parametrize("poll_type", ["single_choice", "multiple_choice", "ranking"])
 def test_independent_voters_can_vote_concurrently(test_engine, poll_type):
-    """Comprueba que varias sesiones simultáneas conservan todos los votos y sus resultados."""
+    """Verify independent voters can vote concurrently."""
     with independent_client(test_engine) as client:
         poll = create_poll(client, poll_type)
     ids = [option["id"] for option in poll["options"]]
     selection = ids if poll_type != "single_choice" else ids[:1]
 
     def vote(index):
-        """Registra un participante distinto con su propia sesión de base de datos."""
+        """Register a different participant using an independent database session."""
         with independent_client(test_engine) as client:
             return client.post(f"/api/polls/{poll['id']}/votes", headers={"X-Voter-Token": f"voter-{index}-" + "x" * 32},
                                json={"selected_option_ids": selection}).status_code

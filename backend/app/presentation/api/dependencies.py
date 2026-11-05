@@ -19,7 +19,7 @@ from app.application.use_cases.close_poll import ClosePoll
 from app.application.use_cases.reopen_poll import ReopenPoll
 
 def get_db_session() -> Generator[Session, None, None]:
-    """Proporciona una sesión de base de datos y la cierra al terminar la petición."""
+    """Provide a database session and close it when the request completes."""
     db = SessionLocal()
 
     try:
@@ -31,13 +31,13 @@ def get_db_session() -> Generator[Session, None, None]:
 def get_poll_repository(
     db: Session = Depends(get_db_session),
 ) -> SqlAlchemyPollRepository:
-    """Construye el repositorio SQLAlchemy con la sesión de la petición."""
+    """Build the SQLAlchemy repository using the request's database session."""
     return SqlAlchemyPollRepository(db)
 
 def get_cast_vote_use_case(
     poll_repository: SqlAlchemyPollRepository = Depends(get_poll_repository),
 ) -> CastVote:
-    """Construye el caso de uso de registro de votos con su validador."""
+    """Build the vote creation use case and its validator."""
     validate_vote_selection = ValidateVoteSelection(poll_repository)
 
     return CastVote(
@@ -48,7 +48,7 @@ def get_cast_vote_use_case(
 def get_update_vote_use_case(
     poll_repository: SqlAlchemyPollRepository = Depends(get_poll_repository),
 ) -> UpdateVote:
-    """Construye el caso de uso de actualización de votos con su validador."""
+    """Build the vote update use case and its validator."""
     validate_vote_selection = ValidateVoteSelection(poll_repository)
 
     return UpdateVote(
@@ -59,7 +59,7 @@ def get_update_vote_use_case(
 def get_poll_results_use_case(
     poll_repository: SqlAlchemyPollRepository = Depends(get_poll_repository),
 ) -> GetPollResults:
-    """Construye el caso de uso de cálculo de resultados."""
+    """Build the results calculation use case."""
     return GetPollResults(poll_repository)
 
 def get_admin_poll(
@@ -68,7 +68,7 @@ def get_admin_poll(
     poll_repository: SqlAlchemyPollRepository = Depends(get_poll_repository),
     administrator = Depends(require_admin_session),
 ) -> Poll:
-    """Obtiene la votación y comprueba el token privado de administración."""
+    """Retrieve the poll and validate its private administration token."""
     poll = poll_repository.get_by_id(poll_id)
 
     if poll is None:
@@ -88,12 +88,12 @@ def get_admin_poll(
 def get_close_poll_use_case(
     poll_repository: SqlAlchemyPollRepository = Depends(get_poll_repository),
 ) -> ClosePoll:
-    """Construye el caso de uso de cierre de votaciones."""
+    """Build the poll closing use case."""
     return ClosePoll(poll_repository)
 
 
 def get_reopen_poll_use_case(
     poll_repository: SqlAlchemyPollRepository = Depends(get_poll_repository),
 ) -> ReopenPoll:
-    """Construye el caso de uso de reapertura de votaciones."""
+    """Build the poll reopening use case."""
     return ReopenPoll(poll_repository)

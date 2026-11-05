@@ -5,7 +5,7 @@ import type {
   PollResponse,
 } from '../types/poll'
 
-// Crea una votación y devuelve sus datos junto con el token de administración.
+// Create a poll and return its data and administration token.
 export function createPoll(
   poll: CreatePollRequest,
 ): Promise<PollCreatedResponse> {
@@ -15,7 +15,7 @@ export function createPoll(
   })
 }
 
-// Obtiene los datos públicos de una votación por su identificador.
+// Retrieve a poll's public data by its identifier.
 export function getPoll(pollId: string): Promise<PollResponse> {
   return apiRequest<PollResponse>(`/api/polls/${pollId}`)
 }

@@ -5,7 +5,7 @@ from app.domain.entities.vote import Vote
 
 
 def test_create_valid_vote():
-    """Comprueba la creación de un voto con datos válidos."""
+    """Verify create valid vote."""
     poll_id = uuid4()
     option_ids = [uuid4(), uuid4()]
 
@@ -24,7 +24,7 @@ def test_create_valid_vote():
 
 
 def test_vote_rejects_empty_voter_token_hash():
-    """Comprueba que el voto rechaza un hash de participante vacío."""
+    """Verify vote rejects empty voter token hash."""
     with pytest.raises(ValueError):
         Vote(
             poll_id=uuid4(),
@@ -34,7 +34,7 @@ def test_vote_rejects_empty_voter_token_hash():
 
 
 def test_vote_requires_at_least_one_option():
-    """Comprueba que el voto exige al menos una opción."""
+    """Verify vote requires at least one option."""
     with pytest.raises(ValueError):
         Vote(
             poll_id=uuid4(),
@@ -44,7 +44,7 @@ def test_vote_requires_at_least_one_option():
 
 
 def test_vote_rejects_duplicate_options():
-    """Comprueba que el voto rechaza opciones repetidas."""
+    """Verify vote rejects duplicate options."""
     option_id = uuid4()
 
     with pytest.raises(ValueError):
@@ -55,7 +55,7 @@ def test_vote_rejects_duplicate_options():
         )
 
 def test_update_vote_selection():
-    """Comprueba que cambiar la selección actualiza las opciones y la fecha del voto."""
+    """Verify update vote selection."""
     vote = Vote(
         poll_id=uuid4(),
         voter_token_hash="anonymous_hash_123",
@@ -75,7 +75,7 @@ def test_update_vote_selection():
 
 
 def test_update_vote_rejects_empty_selection():
-    """Comprueba que la actualización de votos rechaza una selección vacía."""
+    """Verify update vote rejects empty selection."""
     vote = Vote(
         poll_id=uuid4(),
         voter_token_hash="anonymous_hash_123",
@@ -87,7 +87,7 @@ def test_update_vote_rejects_empty_selection():
 
 
 def test_update_vote_rejects_duplicate_options():
-    """Comprueba que la actualización de votos rechaza opciones repetidas."""
+    """Verify update vote rejects duplicate options."""
     vote = Vote(
         poll_id=uuid4(),
         voter_token_hash="anonymous_hash_123",

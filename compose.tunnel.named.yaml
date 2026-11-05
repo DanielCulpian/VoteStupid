@@ -1,4 +1,4 @@
-# Se añade a compose.yaml + compose.tunnel.yaml para usar el dominio estable.
+# Add to compose.yaml and compose.tunnel.yaml to use a stable domain.
 services:
   cloudflared:
     command: ["tunnel", "--no-autoupdate", "--protocol", "http2", "run"]

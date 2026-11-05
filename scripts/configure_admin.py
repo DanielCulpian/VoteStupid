@@ -1,4 +1,4 @@
-"""Genera el hash de la contraseña administrativa sin mostrar ni guardar el texto original."""
+"""Generate the administrator password hash without displaying or storing the original password."""
 from getpass import getpass
 from pathlib import Path
 import argparse
@@ -9,7 +9,7 @@ from app.infrastructure.security.admin_session import password_hash
 
 
 def main():
-    """Solicita y confirma una contraseña suficientemente larga y muestra solo su hash."""
+    """Request and confirm a sufficiently long password, exposing only its hash."""
     parser = argparse.ArgumentParser(description="Configura una contraseña administrativa sin mostrarla.")
     parser.add_argument('--write-env', action='store_true', help='Guarda el hash en el .env privado del proyecto.')
     parser.add_argument('--local-http', action='store_true', help='Permite cookie sin Secure únicamente para desarrollo HTTP local.')
