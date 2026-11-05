@@ -14,6 +14,11 @@ if (-not (Test-Path -LiteralPath $dockerPath)) {
 
 Push-Location (Split-Path $PSScriptRoot -Parent)
 try {
+    # El modo local nunca debe reutilizar accidentalmente un conector público activo.
+    if ($Action -in @('start', 'stop')) {
+        & $dockerPath compose -f compose.yaml -f compose.tunnel.yaml stop cloudflared
+        if ($LASTEXITCODE -ne 0) { throw 'No se ha podido detener el túnel antes de cambiar al modo local.' }
+    }
     switch ($Action) {
         'start' { & $dockerPath compose up -d --build --wait --wait-timeout 180 }
         'stop' { & $dockerPath compose stop }

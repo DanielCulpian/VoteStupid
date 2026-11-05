@@ -30,6 +30,10 @@ Nunca elimines el volumen ni ejecutes `docker compose down -v`.
 
 ## Configurar la administración
 
+Para compartir VoteStupid por HTTPS con tu dominio o con una URL temporal gratuita,
+consulta [Cloudflare Tunnel](docs/cloudflare-tunnel.md). La publicación se activa
+explícitamente con `scripts/tunnel.ps1`; el arranque local no publica en Internet.
+
 Con el entorno Python activado, desde la raíz:
 
 ```powershell
