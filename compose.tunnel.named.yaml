@@ -1,0 +1,6 @@
+# Add to compose.yaml and compose.tunnel.yaml to use a stable domain.
+services:
+  cloudflared:
+    command: ["tunnel", "--no-autoupdate", "--protocol", "http2", "run"]
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?Guarda el token únicamente en tu .env privado}

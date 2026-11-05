@@ -21,3 +21,14 @@ Thumbs.db
 
 # Logs
 *.log
+/backups/
+*.sql
+*.dump
+*.backup
+/.tunnel-url
+
+# Local development files
+/AGENTS.md
+/iniciar_votestupid.ps1
+/cerrar_votestupid.ps1
+/instrucciones_desarrollo.txt
